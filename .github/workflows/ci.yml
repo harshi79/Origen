@@ -122,7 +122,7 @@ jobs:
             echo '### Playwright failure details'
             echo
             echo '```'
-            grep -E '✘|Error:|expect\(|Received|Expected|locator' playwright-output.txt | tail -n 80 || true
+            grep -E -A 12 '✘|Error:' playwright-output.txt | tail -n 160 || true
             echo '```'
           } > /tmp/body.md
           gh pr comment "${{ github.event.pull_request.number }}" \
