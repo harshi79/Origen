@@ -1,3 +1,10 @@
+/**
+ * Local synthetic fixture engine.
+ *
+ * Everything in this module runs in the browser: no network calls, no account
+ * lookups, no verification. Numbers are Luhn-compatible because format checks
+ * are what test fixtures are for — a valid checksum never means a real card.
+ */
 export const NETWORKS = [
   "Visa",
   "Mastercard",
@@ -5,7 +12,20 @@ export const NETWORKS = [
   "Discover",
 ] as const;
 export type Network = (typeof NETWORKS)[number];
-export type ExpiryMode = "random" | "month" | "year" | "fixed";
+/**
+ * `auto` and `custom` are the modes the fixture builder exposes. The original
+ * `random` / `month` / `year` / `fixed` modes are still supported so the
+ * low-level generator contract and its tests stay intact.
+ */
+export type ExpiryMode =
+  | "auto"
+  | "custom"
+  | "random"
+  | "month"
+  | "year"
+  | "fixed";
+/** `custom` reads `GeneratorOptions.cvvValue`; `3` / `4` pin an explicit width. */
+export type CvvOption = "auto" | "custom" | "3" | "4";
 export type OutputFormat = "pipe" | "csv" | "json";
 export interface CardRecord {
   number: string;
@@ -22,8 +42,19 @@ export interface GeneratorOptions {
   expiryMode: ExpiryMode;
   month: number;
   year: number;
-  cvv: "auto" | "3" | "4";
+  cvv: CvvOption;
+  /** Only used when `cvv` is "custom". Synthetic digits that stay in the page. */
+  cvvValue?: string;
 }
+const EXPIRY_MODES: ExpiryMode[] = [
+  "auto",
+  "custom",
+  "random",
+  "month",
+  "year",
+  "fixed",
+];
+const CVV_OPTIONS: CvvOption[] = ["auto", "custom", "3", "4"];
 // Public network-format ranges, not a database of issued cards or accounts.
 const ranges: Record<Network, [number, number, number][]> = {
   Visa: [[4, 4, 1]],
@@ -42,6 +73,22 @@ const ranges: Record<Network, [number, number, number][]> = {
     [622126, 622925, 6],
   ],
 };
+/** "American Express" is long for a summary line or a badge. */
+export function displayName(network: Network): string {
+  return network === "American Express" ? "Amex" : network;
+}
+/** Synthetic CVV width: 4 digits for Amex, 3 for every other network. */
+export function cvvDigits(network: Network): number {
+  return network === "American Express" ? 4 : 3;
+}
+/** Test-format number length: 15 digits for Amex, 16 for every other network. */
+export function cardDigits(network: Network): number {
+  return network === "American Express" ? 15 : 16;
+}
+/** Auto/Custom map onto the original generator modes without changing them. */
+export function resolveExpiryMode(mode: ExpiryMode): "random" | "month" | "year" | "fixed" {
+  return mode === "auto" ? "random" : mode === "custom" ? "fixed" : mode;
+}
 export function luhnValid(value: string): boolean {
   if (!/^\d{2,19}$/.test(value)) return false;
   let sum = 0;
@@ -100,6 +147,7 @@ function compatibleRanges(
       : [];
   });
 }
+/** Local network detection for a (partial) prefix — no metadata service needed. */
 export function compatibleNetworks(prefix: string): Network[] {
   return NETWORKS.filter(
     (network) => compatibleRanges(prefix, network).length > 0,
@@ -109,24 +157,39 @@ export function expiryChoices(
   options: GeneratorOptions,
   now = new Date(),
 ): { month: number; year: number }[] {
+  const mode = resolveExpiryMode(options.expiryMode);
   const result = [];
   for (let year = now.getFullYear(); year <= now.getFullYear() + 10; year++) {
     for (let month = 1; month <= 12; month++) {
       if (year === now.getFullYear() && month <= now.getMonth() + 1) continue;
-      if (
-        ["month", "fixed"].includes(options.expiryMode) &&
-        month !== options.month
-      )
+      if (["month", "fixed"].includes(mode) && month !== options.month)
         continue;
-      if (
-        ["year", "fixed"].includes(options.expiryMode) &&
-        year !== options.year
-      )
-        continue;
+      if (["year", "fixed"].includes(mode) && year !== options.year) continue;
       result.push({ month, year });
     }
   }
   return result;
+}
+/**
+ * A custom CVV stays local and must match the width the selected network uses.
+ * Mixed auto networks cannot share one custom value, so that is rejected
+ * instead of silently narrowing the network choice.
+ */
+function customCvvValue(value: string | undefined, networks: Network[]): string {
+  if (typeof value !== "string" || !/^\d{3,4}$/.test(value))
+    throw new Error(
+      "A custom CVV must be 3 or 4 digits, using numbers only. Never paste a real CVV.",
+    );
+  const lengths = [...new Set(networks.map(cvvDigits))];
+  if (lengths.length > 1)
+    throw new Error(
+      "A custom CVV can only match one network length. Choose a specific network, or switch CVV back to Auto.",
+    );
+  if (lengths[0] !== value.length)
+    throw new Error(
+      `${displayName(networks[0])} uses a ${lengths[0]}-digit CVV. Enter ${lengths[0]} digits, or switch CVV back to Auto.`,
+    );
+  return value;
 }
 export function validateOptions(
   options: GeneratorOptions,
@@ -154,26 +217,28 @@ export function validateOptions(
     throw new Error(
       `Prefix ${options.prefix} is not compatible with ${options.network === "Random" ? "a supported network" : options.network}. Choose another prefix or network.`,
     );
-  if (!["auto", "3", "4"].includes(options.cvv))
+  if (!EXPIRY_MODES.includes(options.expiryMode))
+    throw new Error("Choose a supported expiry mode.");
+  const mode = resolveExpiryMode(options.expiryMode);
+  if (!CVV_OPTIONS.includes(options.cvv))
     throw new Error("Choose a supported CVV format.");
-  if (
+  if (options.cvv === "custom") customCvvValue(options.cvvValue, networks);
+  else if (
     options.cvv !== "auto" &&
-    networks.some((n) => (n === "American Express" ? "4" : "3") !== options.cvv)
+    networks.some((n) => String(cvvDigits(n)) !== options.cvv)
   )
     throw new Error(
       "CVV format does not match the network. Use automatic, or select American Express for 4 digits and another network for 3 digits.",
     );
-  if (!["random", "month", "year", "fixed"].includes(options.expiryMode))
-    throw new Error("Choose a supported expiry mode.");
   if (
-    ["month", "fixed"].includes(options.expiryMode) &&
+    ["month", "fixed"].includes(mode) &&
     (!Number.isInteger(options.month) ||
       options.month < 1 ||
       options.month > 12)
   )
     throw new Error("Select a month between 01 and 12.");
   if (
-    ["year", "fixed"].includes(options.expiryMode) &&
+    ["year", "fixed"].includes(mode) &&
     (!Number.isInteger(options.year) ||
       options.year < now.getFullYear() ||
       options.year > now.getFullYear() + 10)
@@ -199,15 +264,18 @@ export function generateCards(
       options.prefix.length >= width
         ? options.prefix
         : String(randomInt(low, high)).padStart(width, "0");
-    const length = network === "American Express" ? 15 : 16;
+    const length = cardDigits(network);
     while (body.length < length - 1) body += randomInt(0, 9);
     const expiry = dates[randomInt(0, dates.length - 1)];
-    const cvvLength = network === "American Express" ? 4 : 3;
+    const digits = cvvDigits(network);
     return {
       number: body + checkDigit(body),
       month: String(expiry.month).padStart(2, "0"),
       year: String(expiry.year).slice(-2),
-      cvv: String(randomInt(0, 10 ** cvvLength - 1)).padStart(cvvLength, "0"),
+      cvv:
+        options.cvv === "custom"
+          ? options.cvvValue!
+          : String(randomInt(0, 10 ** digits - 1)).padStart(digits, "0"),
       network,
       synthetic: true,
     };

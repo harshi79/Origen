@@ -6,14 +6,15 @@ Community & updates: [Join Channel on Telegram](https://t.me/+y8EekRvqpnQzNjZl)
 
 ## Workspace Tabs
 
-1. **Generator**: 100% local synthetic card fixture generator.
-   - Accepts optional 6–8 digit BIN/IIN prefix (exact input preserved).
-   - Network selection: Auto (detects prefix), Visa, Mastercard, Amex, Discover, or Random.
-   - Quantity 1–100 records with quick presets.
-   - Expiration controls: Random future, specific month, specific year, or fixed date.
-   - Network-appropriate synthetic CVV formatting (3 digits for most, 4 digits for Amex).
-   - Local Luhn checksum generation.
-   - Clear banner: `TEST DATA ONLY — NOT REAL PAYMENT CARDS`.
+1. **Generator**: 100% local synthetic card fixture generator, built as a five-step flow.
+   - **Step 1 · BIN / IIN** — enter an explicit 6–8 digit synthetic test prefix, or switch on **Auto** to have a network-compatible prefix built locally. Network is detected from the BIN with existing local rules (Auto / Random, or a pinned Visa, Mastercard, Amex, Discover). Input is validated before anything is generated; full card numbers are never truncated into a prefix.
+   - **Step 2 · Expiry** — **Auto** creates a synthetic future month/year locally, or choose **Custom** month + year from the dropdowns. Past and current-month values are refused with an inline message.
+   - **Step 3 · CVV** — **Auto** uses the network-appropriate synthetic length (4 digits for Amex, 3 for the rest), or enter a **Custom** value of the correct length. Custom CVVs stay in the page and are never sent anywhere.
+   - **Step 4 · Quantity** — 1–100, with quick presets 1 / 5 / 10 / 25 / 50 / 100.
+   - **Step 5 · Generate** — a live summary line (e.g. `Visa · 16 digits · Auto expiry · Auto CVV · 10 fixtures`) previews the run above the large `Generate Test Data` button.
+   - Friendly inline, field-scoped errors for an invalid BIN, an unsupported prefix/network combination, an invalid expiry, a CVV length that does not fit the network, and an invalid quantity — nothing is generated while a field is invalid.
+   - Local Luhn checksum generation; Auto modes never leave the browser.
+   - Clear banner: `TEST DATA ONLY — NOT REAL PAYMENT CARDS`, plus a `SYNTHETIC TEST FIXTURE` label on the results banner, every table row, and in the code view.
    - Results table with individual record copy, Copy All, and TXT / CSV / JSON export downloads.
    - Code and table views, clear function, and performance timing.
 
@@ -47,9 +48,10 @@ Community & updates: [Join Channel on Telegram](https://t.me/+y8EekRvqpnQzNjZl)
 
 ## Strict Boundaries & Safety
 
-- **Synthetic test data only**: This tool is designed strictly for frontend form validation, mock API services, UI testing, and QA fixture creation.
+- **Synthetic test data only**: This tool is designed strictly for frontend form validation, mock API services, UI testing, and QA fixture creation. Generated rows are labeled `SYNTHETIC TEST FIXTURE` and are never claimed to belong to real accounts.
 - **Never implemented**: Payment processing, transactions, authorizations, balance checking, live card checking, merchant testing, or card scraping.
 - **Card Sorter is text handling only**: it cleans, deduplicates and sorts text already in the page. It does not verify a card, check whether a card is active, run transactions, contact payment processors, query banks, scrape card databases, or send pasted data to any API. All processing happens in the browser and no request is made while sorting.
+- **Generator is offline by design**: BIN detection, expiry and CVV Auto modes, Luhn checksums and validation all run in the browser. There is no external card-validation service, no authorization, and no live-card checking.
 - Generated cards are not issued test accounts and are never verified against banks or card networks.
 
 ## Running Locally
@@ -59,7 +61,7 @@ npm install
 npm run dev         # Starts Vite dev server on 0.0.0.0:5173
 npm run build       # Strict TypeScript check and production build (outputs dist/)
 npm start           # Serves the built dist/ on 0.0.0.0:$PORT (default 8080)
-npm test            # 218 Vitest unit tests + static-server integration tests
+npm test            # 324 Vitest unit tests + static-server integration tests
 npm run test:e2e    # Playwright browser tests across viewports (generator, BIN lookup, Card Sorter)
 npm run lint        # ESLint check
 ```
