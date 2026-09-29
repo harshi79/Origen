@@ -59,7 +59,7 @@ npm install
 npm run dev         # Starts Vite dev server on 0.0.0.0:5173
 npm run build       # Strict TypeScript check and production build (outputs dist/)
 npm start           # Serves the built dist/ on 0.0.0.0:$PORT (default 8080)
-npm test            # 217 Vitest unit tests + static-server integration tests
+npm test            # 218 Vitest unit tests + static-server integration tests
 npm run test:e2e    # Playwright browser tests across viewports (generator, BIN lookup, Card Sorter)
 npm run lint        # ESLint check
 ```

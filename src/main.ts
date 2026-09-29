@@ -128,8 +128,8 @@ $("#app").innerHTML = `
 <header class="site-header"><div class="header-inner">
   <a class="brand" href="./" aria-label="ORIGEN home"><span class="brand-icon">${icon("braces")}</span>ORIGEN<span class="brand-dot">.</span></a>
   <span class="header-divider"></span><span class="workspace-label">DEVELOPER TOOLS</span>
-  <nav aria-label="Main navigation"><a class="nav-active" id="generator-link" href="#generator">${icon("credit-card")} Generator</a><button class="nav-link" id="guide">${icon("code-2")} Quick guide ${icon("arrow-up-right")}</button></nav>
-  <div class="header-right"><span class="version">v1.1</span><a class="telegram-button" href="${TELEGRAM_CHANNEL}" target="_blank" rel="noopener noreferrer" aria-label="Join Channel on Telegram (opens in a new tab)">${telegramIcon}<span class="telegram-label">Join Channel</span></a><button class="icon-button" id="theme" aria-label="Switch to light theme">${icon("sun")}</button></div>
+  <nav aria-label="Main navigation"><a class="nav-active" id="generator-link" href="#generator" aria-label="Generator" aria-current="page">${icon("credit-card")} <span class="nav-text">Generator</span></a><button type="button" class="nav-link" id="guide" aria-label="Quick guide">${icon("code-2")} <span class="nav-text">Quick guide</span> ${icon("arrow-up-right")}</button></nav>
+  <div class="header-right"><span class="version">v1.2</span><a class="telegram-button" href="${TELEGRAM_CHANNEL}" target="_blank" rel="noopener noreferrer" aria-label="Join Channel on Telegram (opens in a new tab)">${telegramIcon}<span class="telegram-label">Join Channel</span></a><button type="button" class="icon-button" id="theme" aria-label="Switch to light theme">${icon("sun")}</button></div>
 </div></header>
 <main>
   <section class="intro"><div><div class="eyebrow"><span></span> THE PAYMENT TESTING TOOLKIT</div><h1>Payment card generator<span>.</span></h1><p>Realistic fixtures. Zero real-world stakes. Build better payment experiences.</p></div><div class="local-badge">${icon("shield-check")}<div><strong>Generation stays local</strong><span>Optional BIN metadata. No card verification.</span></div></div></section>
@@ -149,12 +149,12 @@ $("#app").innerHTML = `
     </form>
     <div class="config-footnote">${icon("lock-keyhole")} No API keys. No accounts. No network calls.</div>
   </section>
-  <section class="panel results-panel" aria-labelledby="results-title"><div class="panel-heading"><div>${icon("layers")}<h2 id="results-title">Generated data</h2><span class="count-badge" id="count">0</span></div><div class="view-toggle" aria-label="Results view"><button id="table-view" class="active" aria-label="Table view" aria-pressed="true">${icon("layers")}</button><button id="code-view" aria-label="Code view" aria-pressed="false">${icon("code-2")}</button></div></div>
+  <section class="panel results-panel" aria-labelledby="results-title"><div class="panel-heading"><div>${icon("layers")}<h2 id="results-title">Generated data</h2><span class="count-badge" id="count">0</span></div><div class="view-toggle" aria-label="Results view"><button type="button" id="table-view" class="active" aria-label="Table view" aria-pressed="true">${icon("layers")}</button><button type="button" id="code-view" aria-label="Code view" aria-pressed="false">${icon("code-2")}</button></div></div>
     <div class="test-banner">${icon("shield-check")}<span>TEST DATA ONLY — NOT REAL PAYMENT CARDS</span><span class="banner-dot"></span></div>
-    <div class="results-toolbar"><div class="format-selector"><label for="format">Format</label><div class="select-wrap no-icon"><select id="format"><option value="pipe">Pipe separated</option><option value="csv">Comma separated</option><option value="json">JSON</option></select>${icon("chevron-down")}</div></div><div class="result-actions"><button class="subtle-button" id="clear" aria-label="Clear" disabled>${icon("trash-2")}<span>Clear</span></button><button class="secondary-button" id="copy-all" disabled>${icon("copy")} Copy all</button></div></div>
+    <div class="results-toolbar"><div class="format-selector"><label for="format">Format</label><div class="select-wrap no-icon"><select id="format"><option value="pipe">Pipe separated</option><option value="csv">Comma separated</option><option value="json">JSON</option></select>${icon("chevron-down")}</div></div><div class="result-actions"><button type="button" class="subtle-button" id="clear" aria-label="Clear" disabled>${icon("trash-2")}<span>Clear</span></button><button type="button" class="secondary-button" id="copy-all" disabled>${icon("copy")} Copy all</button></div></div>
     <div id="results-content" class="results-content"></div>
-    <div class="results-bottom"><div class="stats"><span><span class="status-dot"></span><strong id="stat-records">0</strong> records</span><span>${icon("zap")}<strong id="stat-time">—</strong></span><span class="luhn-stat">${icon("check")} Luhn compatible</span></div><div class="export-actions"><button id="copy-text" disabled>Copy text</button><span>·</span><button id="copy-json" disabled>Copy JSON ${icon("braces")}</button></div></div>
-    <div class="download-toolbar"><span>${icon("download")} Download synthetic fixtures</span><div>${(['txt', 'csv', 'json'] as const).map(type => `<button class="secondary-button" data-export="${type}" aria-label="Export ${type.toUpperCase()}" disabled>${type.toUpperCase()}</button>`).join('')}</div></div>
+    <div class="results-bottom"><div class="stats"><span><span class="status-dot"></span><strong id="stat-records">0</strong> records</span><span>${icon("zap")}<strong id="stat-time">—</strong></span><span class="luhn-stat">${icon("check")} Luhn compatible</span></div><div class="export-actions"><button type="button" id="copy-text" disabled>Copy text</button><span>·</span><button type="button" id="copy-json" disabled>Copy JSON ${icon("braces")}</button></div></div>
+    <div class="download-toolbar"><span>${icon("download")} Download synthetic fixtures</span><div>${(['txt', 'csv', 'json'] as const).map(type => `<button type="button" class="secondary-button" data-export="${type}" aria-label="Export ${type.toUpperCase()}" disabled>${type.toUpperCase()}</button>`).join('')}</div></div>
   </section>
   </div>
   <section class="benefits" aria-label="How it works"><article><div class="benefit-icon">${icon("terminal")}</div><div><h3>Made for your sandbox</h3><p>Fixtures for forms, QA flows, and UI validation.</p></div><span>01</span></article><article><div class="benefit-icon">${icon("shield-check")}</div><div><h3>Format-valid. Never verified.</h3><p>Luhn-compatible numbers. No account lookups.</p></div><span>02</span></article><article><div class="benefit-icon">${icon("braces")}</div><div><h3>Generate. Copy. Build.</h3><p>Clean output that fits right into your workflow.</p></div><span>03</span></article></section>
@@ -164,7 +164,7 @@ $("#app").innerHTML = `
   <footer><span><span class="footer-brand">ORIGEN.</span> Small tools. Better builds.</span><span>${icon("lock-keyhole")} Client-side only <span class="footer-dot">/</span> Built for developers</span></footer>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-<dialog id="guide-dialog"><div class="dialog-heading"><span class="eyebrow">ORIGEN / DOCS</span><button id="close-guide" class="icon-button" aria-label="Close quick guide">${icon("x")}</button></div><h2>A small tool for better tests.</h2><p>Generate fictional, format-compatible payment-card fixtures without leaving your browser.</p><ol><li><strong>Set your parameters.</strong> Enter 6–8 prefix digits or leave blank. Random selects only networks compatible with your prefix.</li><li><strong>Generate up to 100 fixtures.</strong> Visa, Mastercard and Discover use 16 digits; Amex uses 15. All include a calculated Luhn check digit.</li><li><strong>Copy into your test suite.</strong> Use pipe-separated lines, CSV-style lines or JSON. JSON explicitly includes <code>synthetic: true</code>.</li></ol><div class="dialog-warning">A valid checksum does not mean an active account. These numbers are not guaranteed reserved test numbers. Never submit them to live payment systems. For gateway sandboxes, use that provider’s official test fixtures.</div><p class="hint">No payment processing, authorization, balance checking, account verification, or saved card data. BIN Lookup sends only a 6–8 digit prefix to Guison for range metadata. History is page-memory only. The theme is the only persisted setting.</p><button class="generate-button" id="guide-done">Got it. Let’s build. ${icon("arrow-right")}</button></dialog>
+<dialog id="guide-dialog"><div class="dialog-heading"><span class="eyebrow">ORIGEN / DOCS</span><button type="button" id="close-guide" class="icon-button" aria-label="Close quick guide">${icon("x")}</button></div><h2>A small tool for better tests.</h2><p>Generate fictional, format-compatible payment-card fixtures without leaving your browser.</p><ol><li><strong>Set your parameters.</strong> Enter 6–8 prefix digits or leave blank. Random selects only networks compatible with your prefix.</li><li><strong>Generate up to 100 fixtures.</strong> Visa, Mastercard and Discover use 16 digits; Amex uses 15. All include a calculated Luhn check digit.</li><li><strong>Copy into your test suite.</strong> Use pipe-separated lines, CSV-style lines or JSON. JSON explicitly includes <code>synthetic: true</code>.</li></ol><div class="dialog-warning">A valid checksum does not mean an active account. These numbers are not guaranteed reserved test numbers. Never submit them to live payment systems. For gateway sandboxes, use that provider’s official test fixtures.</div><p class="hint">No payment processing, authorization, balance checking, account verification, or saved card data. BIN Lookup sends only a 6–8 digit prefix to Guison for range metadata. History is page-memory only. The theme is the only persisted setting.</p><button type="button" class="generate-button" id="guide-done">Got it. Let’s build. ${icon("arrow-right")}</button></dialog>
 `;
 function options(): GeneratorInput {
   return {
@@ -194,27 +194,24 @@ function render() {
   $("#results-content").classList.toggle("has-records", !!records.length);
   if (!records.length) {
     $("#results-content").innerHTML =
-      `<div class="empty-state"><div class="card-illustration"><div class="ghost-card"></div><div class="mock-card"><div class="mock-top"><span class="chip">${icon("braces")}</span>${icon("sparkles")}</div><div class="mock-number">•••• &nbsp;•••• &nbsp;•••• &nbsp;••••</div><div class="mock-bottom"><span>SYNTHETIC / TEST ONLY</span><span>MM/YY</span></div></div><span class="card-plus">${icon("plus")}</span></div><span class="empty-eyebrow">A CLEAN SLATE</span><h3>Your next test starts here.</h3><p>Configure your fixtures and hit generate.<br/>We’ll handle the digits. You handle the build.</p><div class="empty-code"><span>$</span> origen.generate() <span class="cursor">▌</span></div></div>`;
+      `<div class="empty-state"><div class="card-illustration"><div class="ghost-card"></div><div class="mock-card"><div class="mock-top"><span class="chip">${icon("braces")}</span>${icon("sparkles")}</div><div class="mock-number">•••• &nbsp;•••• &nbsp;•••• &nbsp;••••</div><div class="mock-bottom"><span>SYNTHETIC / TEST ONLY</span><span>MM/YY</span></div></div><span class="card-plus">${icon("plus")}</span></div><span class="empty-eyebrow">A CLEAN SLATE</span><h3>Your next test starts here.</h3><p>Configure your fixtures and hit generate. We’ll handle the digits. You handle the build.</p><div class="empty-code"><span>$</span> origen.generate() <span class="cursor">▌</span></div></div>`;
+    refreshIcons();
   } else if (view === "code") {
     $("#results-content").innerHTML =
       '<div class="code-label">// SYNTHETIC TEST FIXTURES · NOT REAL PAYMENT CARDS</div><pre id="code-output" tabindex="0" aria-label="Generated test fixtures"></pre>';
     $("#code-output").textContent = formatRecords(records, format());
   } else {
     $("#results-content").innerHTML =
-      `<table><caption class="sr-only">Synthetic payment-card test fixtures. Not real payment cards.</caption><thead><tr><th class="row-num">#</th><th>Card number</th><th>Expiry</th><th>CVV</th><th>Network</th><th><span class="sr-only">Copy record</span></th></tr></thead><tbody>${records.map((r, i) => `<tr><td class="row-num">${String(i + 1).padStart(2, "0")}</td><td class="card-number">${displayNumber(r)}</td><td class="mono">${r.month}/${r.year}</td><td class="mono cvv-cell">${r.cvv}</td><td><span class="network-badge ${r.network.toLowerCase().replaceAll(" ", "-")}"><span></span>${r.network === "American Express" ? "Amex" : r.network}</span></td><td><button class="row-copy icon-button" data-copy="${i}" aria-label="Copy test record ${i + 1}">${icon("copy")}</button></td></tr>`).join("")}</tbody></table>`;
-    document
-      .querySelectorAll<HTMLButtonElement>("[data-copy]")
-      .forEach((btn) =>
-        btn.addEventListener("click", () =>
-          copy(
-            formatRecords([records[Number(btn.dataset.copy)]], format()),
-            "Test record copied",
-          ),
-        ),
-      );
+      `<table><caption class="sr-only">Synthetic payment-card test fixtures. Not real payment cards.</caption><thead><tr><th class="row-num">#</th><th>Card number</th><th>Expiry</th><th>CVV</th><th>Network</th><th><span class="sr-only">Copy record</span></th></tr></thead><tbody>${records.map((r, i) => `<tr><td class="row-num">${String(i + 1).padStart(2, "0")}</td><td class="card-number">${displayNumber(r)}</td><td class="mono">${r.month}/${r.year}</td><td class="mono cvv-cell">${r.cvv}</td><td><span class="network-badge ${r.network.toLowerCase().replaceAll(" ", "-")}"><span></span>${r.network === "American Express" ? "Amex" : r.network}</span></td><td><button type="button" class="row-copy icon-button" data-copy="${i}" aria-label="Copy test record ${i + 1}">${icon("copy")}</button></td></tr>`).join("")}</tbody></table>`;
+    refreshIcons();
   }
-  refreshIcons();
 }
+$("#results-content").addEventListener("click", (event) => {
+  const btn = (event.target as Element | null)?.closest<HTMLButtonElement>("[data-copy]");
+  if (!btn) return;
+  const row = records[Number(btn.dataset.copy)];
+  if (row) void copy(formatRecords([row], format()), "Test record copied");
+});
 function toast(message: string, kind: "ok" | "error" = "ok") {
   clearTimeout(timer);
   $("#toast").innerHTML = `${icon(kind === "error" ? "circle-alert" : "check")}<span></span>`;
@@ -323,7 +320,12 @@ $("#expiryMode").addEventListener("change", () => {
   $("#month-field").hidden = mode === "year";
   $("#year-field").hidden = mode === "month";
 });
-$("#format").addEventListener("change", render);
+$("#format").addEventListener("change", () => {
+  if (view === "code" && records.length) {
+    const code = document.querySelector<HTMLElement>("#code-output");
+    if (code) code.textContent = formatRecords(records, format());
+  }
+});
 for (const mode of ["table", "code"] as const)
   $(`#${mode}-view`).addEventListener("click", () => {
     view = mode;

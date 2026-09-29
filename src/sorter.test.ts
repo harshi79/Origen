@@ -454,4 +454,13 @@ describe("large pastes stay correct and fast", () => {
     expect(analyzeLine(sorted.entries[0].text).recognized).toBe(true);
     expect(texts(originalOrder(sorted.entries).entries)[0]).toBe(records[0]);
   });
+  it("handles unexpected non-string inputs defensively without throwing", () => {
+    expect(splitLines(null as unknown as string)).toEqual([]);
+    expect(lineIdentity(undefined as unknown as string)).toBe("");
+    expect(detectNetwork(null as unknown as string)).toBeNull();
+    expect(analyzeLine(null as unknown as string)).toEqual({
+      recognized: false,
+      raw: "",
+    });
+  });
 });

@@ -10,10 +10,10 @@ interface WorkspaceServices {
   setTheme: (theme: 'light' | 'dark') => void;
 }
 export const tabsMarkup = `<div class="workspace-tabs" role="tablist" aria-label="Developer tools">
-  <button id="tab-generator" role="tab" aria-controls="panel-generator" aria-selected="true" tabindex="0"><i data-lucide="zap" aria-hidden="true"></i>Generator<span class="tab-key">01</span></button>
-  <button id="tab-lookup" role="tab" aria-controls="panel-lookup" aria-selected="false" tabindex="-1"><i data-lucide="fingerprint" aria-hidden="true"></i>BIN Lookup<span class="tab-key">02</span></button>
-  <button id="tab-sorter" role="tab" aria-controls="panel-sorter" aria-selected="false" tabindex="-1"><i data-lucide="list-filter" aria-hidden="true"></i>Card Sorter<span class="tab-key">03</span></button>
-  <button id="tab-settings" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1"><i data-lucide="sliders-horizontal" aria-hidden="true"></i>Settings<span class="tab-key">04</span></button>
+  <button type="button" id="tab-generator" role="tab" aria-controls="panel-generator" aria-selected="true" tabindex="0"><i data-lucide="zap" aria-hidden="true"></i>Generator<span class="tab-key">01</span></button>
+  <button type="button" id="tab-lookup" role="tab" aria-controls="panel-lookup" aria-selected="false" tabindex="-1"><i data-lucide="fingerprint" aria-hidden="true"></i>BIN Lookup<span class="tab-key">02</span></button>
+  <button type="button" id="tab-sorter" role="tab" aria-controls="panel-sorter" aria-selected="false" tabindex="-1"><i data-lucide="list-filter" aria-hidden="true"></i>Card Sorter<span class="tab-key">03</span></button>
+  <button type="button" id="tab-settings" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1"><i data-lucide="sliders-horizontal" aria-hidden="true"></i>Settings<span class="tab-key">04</span></button>
   <span class="tabs-status"><span class="status-dot"></span> A WORKSPACE FOR TESTING, NOT TRANSACTING</span>
 </div>`;
 export const extraPanelsMarkup = `
@@ -29,15 +29,15 @@ export const extraPanelsMarkup = `
           <p class="lookup-service-note">Powered by Guison · No API key required</p>
         </form>
       </section>
-      <section class="panel recent-panel" aria-labelledby="recent-title"><div class="panel-heading"><div><i data-lucide="layers" aria-hidden="true"></i><h2 id="recent-title">Recent lookups</h2><span class="count-badge" id="history-count">0</span></div></div><div id="lookup-history"></div><p class="history-note">This page session only · Up to 10 prefixes<br/>Cleared on reload. Click an entry to view it offline.</p></section>
-      <div class="lookup-reassurance"><i data-lucide="shield-check" aria-hidden="true"></i><p><strong>Context, not verification.</strong><br/>BIN metadata describes an issuing range, not an account, balance or card status.</p></div>
+      <section class="panel recent-panel" aria-labelledby="recent-title"><div class="panel-heading"><div><i data-lucide="layers" aria-hidden="true"></i><h2 id="recent-title">Recent lookups</h2><span class="count-badge" id="history-count">0</span></div></div><div id="lookup-history"></div><p class="history-note">This page session only · Up to 10 prefixes. Cleared on reload. Click an entry to view it offline.</p></section>
+      <div class="lookup-reassurance"><i data-lucide="shield-check" aria-hidden="true"></i><p><strong>Context, not verification.</strong> BIN metadata describes an issuing range, not an account, balance or card status.</p></div>
     </div>
     <section class="panel metadata-panel" aria-labelledby="metadata-title">
       <div class="panel-heading"><div><i data-lucide="braces" aria-hidden="true"></i><h2 id="metadata-title">BIN metadata</h2></div><span class="tiny-badge" id="metadata-source">GUISON API</span></div>
-      <div class="metadata-banner"><i data-lucide="info" aria-hidden="true"></i>RANGE METADATA ONLY — NOT CARD VERIFICATION</div>
-      <div class="metadata-toolbar"><p id="lookup-result-status" role="status" aria-live="polite">Waiting for a prefix</p><button class="subtle-button" id="lookup-clear" aria-label="Clear lookup"><i data-lucide="trash-2" aria-hidden="true"></i>Clear</button></div>
+      <div class="metadata-banner"><i data-lucide="info" aria-hidden="true"></i><span>RANGE METADATA ONLY — NOT CARD VERIFICATION</span><span class="banner-dot"></span></div>
+      <div class="metadata-toolbar"><p id="lookup-result-status" role="status" aria-live="polite">Waiting for a prefix</p><button type="button" class="subtle-button" id="lookup-clear" aria-label="Clear lookup"><i data-lucide="trash-2" aria-hidden="true"></i><span>Clear</span></button></div>
       <div id="metadata-content"></div>
-      <div class="metadata-footer"><span>Unknown means not supplied. Never inferred.</span><div><button class="secondary-button" id="copy-metadata" disabled><i data-lucide="copy" aria-hidden="true"></i>Copy metadata</button><button class="secondary-button" id="copy-metadata-json" disabled><i data-lucide="braces" aria-hidden="true"></i>Copy JSON</button></div></div>
+      <div class="metadata-footer"><span>Unknown means not supplied. Never inferred.</span><div><button type="button" class="secondary-button" id="copy-metadata" disabled><i data-lucide="copy" aria-hidden="true"></i>Copy metadata</button><button type="button" class="secondary-button" id="copy-metadata-json" disabled><i data-lucide="braces" aria-hidden="true"></i>Copy JSON</button></div></div>
     </section>
   </div>
   <p class="attribution">Metadata source: Guison · <a href="https://github.com/venelinkochev/bin-list-data" target="_blank" rel="noopener noreferrer">venelinkochev/bin-list-data</a> · CC BY 4.0. Community data may be incomplete or outdated. Not authoritative payment information.</p>
@@ -46,12 +46,12 @@ ${sorterMarkup}
 <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden>
   <div class="settings-grid">
     <section class="panel settings-panel"><div class="panel-heading"><div><i data-lucide="sliders-horizontal" aria-hidden="true"></i><h2>Workspace preferences</h2></div><span class="step-tag">LOCAL</span></div>
-      <div class="setting-row"><div><h3>Appearance</h3><p>A quieter workspace, day or night.<br/>Only your theme preference is saved.</p></div><div class="select-wrap no-icon"><label class="sr-only" for="settings-theme">Theme</label><select id="settings-theme"><option value="dark">Dark</option><option value="light">Light</option></select><i data-lucide="chevron-down" aria-hidden="true"></i></div></div>
-      <div class="setting-row history-setting"><div><h3>Session lookup history</h3><p><span id="settings-history-count">0</span> recent prefixes in page memory.<br/>Never saved to browser storage.</p></div><button class="secondary-button" id="clear-history" disabled><i data-lucide="trash-2" aria-hidden="true"></i>Clear history</button></div>
+      <div class="setting-row"><div><h3>Appearance</h3><p>A quieter workspace, day or night. Only your theme preference is saved.</p></div><div class="select-wrap no-icon"><label class="sr-only" for="settings-theme">Theme</label><select id="settings-theme"><option value="dark">Dark</option><option value="light">Light</option></select><i data-lucide="chevron-down" aria-hidden="true"></i></div></div>
+      <div class="setting-row history-setting"><div><h3>Session lookup history</h3><p><span id="settings-history-count">0</span> recent prefixes in page memory. Never saved to browser storage.</p></div><button type="button" class="secondary-button" id="clear-history" disabled><i data-lucide="trash-2" aria-hidden="true"></i>Clear history</button></div>
       <div class="settings-footnote"><i data-lucide="lock-keyhole" aria-hidden="true"></i>No sign-in. No tracking. No saved card data.</div>
     </section>
     <section class="panel settings-panel"><div class="panel-heading"><div><i data-lucide="arrow-up-right" aria-hidden="true"></i><h2>Metadata API</h2></div><span class="tiny-badge">OPTIONAL</span></div>
-      <div class="api-card"><div class="api-provider"><span class="api-mark">G</span><div><h3>Guison</h3><p>guison-api.onrender.com</p></div><span id="api-status-badge" class="api-status">Not checked</span></div><p id="api-status" role="status" aria-live="polite">No requests made. Status checks are manual.</p><button id="check-api" class="secondary-button"><i data-lucide="rotate-ccw" aria-hidden="true"></i>Check API status</button><p class="hint">Checks dataset readiness at /readyz, without sending a BIN.<br/>Availability is independent of the local generator.</p></div>
+      <div class="api-card"><div class="api-provider"><span class="api-mark">G</span><div><h3>Guison</h3><p>guison-api.onrender.com</p></div><span id="api-status-badge" class="api-status">Not checked</span></div><p id="api-status" role="status" aria-live="polite">No requests made. Status checks are manual.</p><button type="button" id="check-api" class="secondary-button"><i data-lucide="rotate-ccw" aria-hidden="true"></i>Check API status</button><p class="hint">Checks dataset readiness at /readyz, without sending a BIN. Availability is independent of the local generator.</p></div>
     </section>
     <section class="panel about-panel"><div class="panel-heading"><div><i data-lucide="shield-check" aria-hidden="true"></i><h2>Purpose-built for development</h2></div><span class="tiny-badge">ORIGEN</span></div><div class="about-grid"><article><i data-lucide="terminal" aria-hidden="true"></i><h3>Local synthetic fixtures</h3><p>Generation runs in your browser. A Luhn-compatible number only passes a mathematical format check; it does not establish an account’s existence.</p></article><article><i data-lucide="fingerprint" aria-hidden="true"></i><h3>Prefix metadata only</h3><p>Only explicit lookups of 6–8 digits reach Guison. No card numbers, CVVs or expiry dates are sent. Returned links and logos are never loaded automatically.</p></article><article><i data-lucide="lock-keyhole" aria-hidden="true"></i><h3>Firm boundaries</h3><p>No payments, transactions, authorizations, balance checks, active-card checks, merchant testing, scraping or real account data.</p></article></div><div class="about-warning">TEST DATA ONLY — NOT REAL PAYMENT CARDS<p>Synthetic numbers may coincide with real numbers. Never use them in live payment systems. Use your provider’s official fixtures for gateway sandbox flows. Metadata is not verification.</p></div></section>
   </div>
@@ -69,6 +69,10 @@ export function mountWorkspace(services: WorkspaceServices): { activeTab: () => 
       button.setAttribute('aria-selected', String(id === tab)); button.tabIndex = id === tab ? 0 : -1;
       $(`#panel-${id}`).hidden = id !== tab;
     }
+    const genLink = $('#generator-link');
+    genLink.classList.toggle('nav-active', tab === 'generator');
+    if (tab === 'generator') genLink.setAttribute('aria-current', 'page');
+    else genLink.removeAttribute('aria-current');
     if (focus) $(`#tab-${tab}`).focus();
     const headings = { generator: ['Payment card generator', 'Realistic fixtures. Zero real-world stakes. Build better payment experiences.'], lookup: ['A little context for your BIN', 'Understand the prefix. Never verify the card. Metadata for your development workflow.'], sorter: ['Sort your test data', 'Clean, dedupe and order pasted test records locally. Nothing is uploaded, verified or looked up.'], settings: ['Make yourself at home', 'A few preferences. Transparent connections. Clear boundaries.'] };
     $('h1').textContent = headings[tab][0];
@@ -102,7 +106,7 @@ export function mountWorkspace(services: WorkspaceServices): { activeTab: () => 
   function renderEmpty() {
     current = null; copies(false);
     $('#metadata-source').textContent = 'GUISON API';
-    $('#metadata-content').innerHTML = `<div class="lookup-empty"><div class="lookup-symbol">${icon('fingerprint')}</div><span class="empty-eyebrow">JUST THE FIRST FEW DIGITS</span><h3>Know the range. Not the account.</h3><p>Enter a 6–8 digit prefix to explore available<br/>network, issuer and country metadata.</p><div class="empty-code"><span>GET</span> /v1/bin/{prefix}</div><span class="lookup-empty-note">Nothing is sent until you choose Lookup.</span></div>`;
+    $('#metadata-content').innerHTML = `<div class="lookup-empty"><div class="lookup-symbol">${icon('fingerprint')}</div><span class="empty-eyebrow">JUST THE FIRST FEW DIGITS</span><h3>Know the range. Not the account.</h3><p>Enter a 6–8 digit prefix to explore available network, issuer and country metadata.</p><div class="empty-code"><span>GET</span> /v1/bin/{prefix}</div><span class="lookup-empty-note">Nothing is sent until you choose Lookup.</span></div>`;
     refreshIcons();
   }
   function renderMetadata(data: BinMetadata, cached = false) {
@@ -161,7 +165,7 @@ export function mountWorkspace(services: WorkspaceServices): { activeTab: () => 
       if (error instanceof LookupError && error.code === 'cancelled') return;
       $('#lookup-error').textContent = (error as Error).message; $('#lookup-error').hidden = false;
       $('#lookup-result-status').textContent = error instanceof LookupError && error.code === 'not_found' ? `No metadata found for ${bin}` : 'Lookup failed. Local generation is still available.';
-      $('#metadata-content').innerHTML = `<div class="lookup-empty lookup-failed">${icon('info')}<h3>No metadata to display.</h3><p>Review the message beside the form.<br/>You can retry or keep building with local fixtures.</p></div>`;
+      $('#metadata-content').innerHTML = `<div class="lookup-empty lookup-failed">${icon('info')}<h3>No metadata to display.</h3><p>Review the message beside the form. You can retry or keep building with local fixtures.</p></div>`;
       if (revision === statusRevision) updateStatus(error instanceof LookupError && error.code === 'not_found' ? 'Reachable' : 'Unavailable', (error as Error).message, 'warning');
     } finally { if (pending === controller) { pending = null; setLoading(false); } }
   });
