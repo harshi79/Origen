@@ -1,6 +1,8 @@
-# Fixture / Card Lab
+# ORIGEN
 
 A developer-only payment test-data and BIN metadata utility. Built with TypeScript, Vite, native DOM components, and local Lucide icons.
+
+Community & updates: [Join Channel on Telegram](https://t.me/+y8EekRvqpnQzNjZl)
 
 ## Workspace Tabs
 
@@ -28,6 +30,11 @@ A developer-only payment test-data and BIN metadata utility. Built with TypeScri
    - Clear session lookup history button.
    - Clear safety guidelines and development boundaries.
 
+## Interface
+
+- Renamed end to end to **ORIGEN** (page title, wordmark, navigation, Open Graph metadata, README).
+- The header carries a **Join Channel** button that opens the ORIGEN Telegram channel in a new tab. It is keyboard reachable, has an explicit accessible label, and collapses to a compact icon button on very narrow screens.
+
 ## Strict Boundaries & Safety
 
 - **Synthetic test data only**: This tool is designed strictly for frontend form validation, mock API services, UI testing, and QA fixture creation.
@@ -40,7 +47,7 @@ A developer-only payment test-data and BIN metadata utility. Built with TypeScri
 npm install
 npm run dev        # Starts Vite on 0.0.0.0:5173
 npm run test       # Runs 150 Vitest unit tests
-npm run test:e2e   # Runs 16 Playwright browser tests across viewports
+npm run test:e2e   # Runs Playwright browser tests across viewports
 npm run lint       # ESLint check
 npm run build      # Strict TypeScript check and production build
 ```

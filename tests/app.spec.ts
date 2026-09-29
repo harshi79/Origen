@@ -3,6 +3,59 @@ test.beforeEach(async ({ context, page }) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await page.goto("/");
 });
+test("brands the workspace as ORIGEN and links the Telegram channel", async ({
+  page,
+}) => {
+  await expect(page).toHaveTitle("ORIGEN — Payment Testing Toolkit");
+  await expect(page.getByRole("link", { name: "ORIGEN home" })).toBeVisible();
+  await expect(page.locator(".brand")).toHaveText("ORIGEN.");
+  await expect(page.locator('meta[property="og:site_name"]')).toHaveAttribute(
+    "content",
+    "ORIGEN",
+  );
+  await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(
+    "content",
+    "ORIGEN — Payment Testing Toolkit",
+  );
+  await expect(page.locator("#fixture, #card-lab-link")).toHaveCount(0);
+  await expect(page.locator("body")).not.toContainText("Card Lab");
+  const join = page.getByRole("link", { name: /Join Channel/i });
+  await expect(join).toBeVisible();
+  await expect(join).toHaveAttribute("href", "https://t.me/+y8EekRvqpnQzNjZl");
+  await expect(join).toHaveAttribute("target", "_blank");
+  await expect(join).toHaveAttribute("rel", "noopener noreferrer");
+  await expect(join).toHaveAttribute("aria-label", /Telegram/i);
+  await expect(join.locator("svg.telegram-mark")).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+});
+
+test("opening the Telegram channel targets a new tab without leaving the app", async ({
+  context,
+  page,
+}) => {
+  const requested: string[] = [];
+  await context.route("https://t.me/**", (route) => {
+    requested.push(route.request().url());
+    return route.fulfill({
+      status: 200,
+      contentType: "text/html",
+      body: "channel",
+    });
+  });
+  const [popup] = await Promise.all([
+    context.waitForEvent("page"),
+    page.getByRole("link", { name: /Join Channel/i }).click(),
+  ]);
+  await popup.waitForLoadState("domcontentloaded");
+  expect(requested).toEqual(["https://t.me/+y8EekRvqpnQzNjZl"]);
+  expect(page.url()).toBe("http://localhost:5173/");
+  await popup.close();
+});
+
 test("generates locally and all copy actions export the requested data", async ({
   page,
 }) => {

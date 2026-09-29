@@ -128,13 +128,14 @@ p {
   display: flex;
   align-items: center;
   font-weight: 750;
-  font-size: 28px;
-  letter-spacing: -1.6px;
+  font-size: 24px;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
   gap: 10px;
 }
 .brand-dot {
   color: var(--accent);
-  margin-left: -9px;
+  margin-left: -7px;
 }
 .brand-icon {
   background: var(--accent);
@@ -213,6 +214,37 @@ nav .nav-active svg {
   border-radius: 4px;
   font: 10px var(--mono);
   color: var(--muted);
+}
+.telegram-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 13px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 1px solid #d4f898;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1;
+  white-space: nowrap;
+  box-shadow: 0 2px 0 #00000015;
+  transition:
+    filter 0.16s,
+    box-shadow 0.16s;
+}
+.telegram-button:hover {
+  filter: brightness(1.06);
+}
+.telegram-button:active {
+  box-shadow: none;
+}
+.telegram-mark {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 .icon-button {
   width: 32px;
@@ -1413,7 +1445,7 @@ dialog .generate-button svg {
     gap: 15px;
   }
   .brand {
-    font-size: 24px;
+    font-size: 21px;
   }
   .brand-icon {
     height: 29px;
@@ -1670,3 +1702,29 @@ dialog .generate-button svg {
 @media(max-width:900px){.tabs-status{display:none}.lookup-layout{grid-template-columns:285px minmax(0,1fr);gap:15px}.metadata-banner{font-size:8px;letter-spacing:0}.lookup-empty h3{font-size:18px}.lookup-empty p{font-size:11px}.metadata-footer{padding:16px}.settings-grid{grid-template-columns:1fr}.about-grid{gap:20px}.setting-row .select-wrap{width:140px}.setting-row .secondary-button{min-width:120px}.api-status{margin-left:auto}.about-panel{grid-column:auto}}
 @media(max-width:680px){.workspace-tabs{gap:3px;justify-content:space-between;margin-bottom:21px;padding-bottom:14px}.workspace-tabs>button{padding:10px 11px;font-size:11px;gap:7px}.workspace-tabs svg{width:14px;height:14px}.tab-key{display:none}.lookup-layout{grid-template-columns:1fr;gap:20px}.lookup-sidebar{gap:17px}.lookup-sidebar form{padding:21px 20px 0}.lookup-reassurance{padding:0 4px}.lookup-empty{min-height:365px;padding:28px 18px}.lookup-empty h3{font-size:19px}.lookup-empty p{font-size:11px}.metadata-panel{min-height:550px}.metadata-banner{padding:13px 16px;font-size:7px;gap:6px}.metadata-toolbar{padding:13px 16px}.metadata-grid{padding:4px 18px 20px}.metadata-grid>div{padding:18px 10px 15px 0}.metadata-grid dd{font-size:12px}.metadata-grid dt{font-size:8px}.response-details{margin:0 18px 20px}.metadata-footer{gap:13px}.metadata-footer>div{flex:1;justify-content:flex-end}.setting-row{padding:23px 18px;gap:12px}.setting-row .select-wrap{width:90px;min-width:90px}.setting-row .secondary-button{min-width:0;padding:0 9px}.setting-row p{font-size:10px}.setting-row h3{font-size:12px}.api-card{padding:24px 18px}.api-provider{gap:10px}.api-provider p{font-size:9px}.api-status{font-size:8px;padding:4px 7px}.settings-footnote{font-size:9px;padding:17px 18px}.about-grid{grid-template-columns:1fr;padding:25px 20px;gap:25px}.about-grid article>svg{margin-bottom:10px}.about-grid h3{margin-bottom:8px}.about-warning{margin:0 18px 20px;padding:15px;font-size:9px;line-height:1.6}.download-toolbar{padding:13px 16px}.download-toolbar>span{font-size:9px}.attribution{font-size:9px;margin:18px 0}.metadata-toolbar p{max-width:220px}.history-item{padding:14px 20px}}
 @media(max-width:360px){main{padding-left:14px;padding-right:14px}.header-inner{padding:0 14px;gap:10px}nav{gap:12px}.workspace-tabs>button{padding:10px 9px;gap:6px;font-size:10px}.results-toolbar{flex-wrap:wrap;gap:10px}.format-selector{flex:1}.result-actions{margin-left:auto}.test-banner{font-size:7px;gap:6px}.metadata-banner{font-size:6.5px}.intro h1{font-size:27px}.setting-row{flex-wrap:wrap;gap:15px}.setting-row>div:first-child{flex:1}.history-setting>div:first-child{min-width:140px}.api-provider{align-items:flex-start}.api-status{margin-left:50px}.metadata-grid dd{font-size:11px}.metadata-footer>div{justify-content:flex-start}.lookup-empty h3{font-size:17px}.download-toolbar>span{font-size:9px}}
+
+/* Brand refresh: ORIGEN wordmark and the header Telegram channel call to action. */
+.telegram-button .telegram-label{white-space:nowrap}
+@media(max-width:900px){.header-right{gap:16px}}
+@media(max-width:680px){
+  .header-right{gap:13px}
+  .telegram-button{height:30px;padding:0 10px;gap:7px;font-size:11px}
+  .telegram-mark{width:14px;height:14px}
+}
+@media(max-width:560px){
+  .telegram-button{width:30px;padding:0;gap:0}
+  .telegram-button .telegram-label{display:none}
+}
+@media(max-width:360px){
+  .header-inner{gap:7px;padding:0 12px}
+  .brand{gap:7px;font-size:16px;letter-spacing:0}
+  .brand-icon{width:24px;height:24px}
+  .brand-icon svg{width:17px;height:17px}
+  .brand-dot{margin-left:-4px}
+  nav{gap:10px}
+  nav a{font-size:10px;gap:6px}
+  .header-right{gap:9px}
+  .header-right .icon-button{width:24px}
+  .telegram-button{width:26px;height:26px}
+  .telegram-mark{width:13px;height:13px}
+}
