@@ -405,6 +405,9 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
     if (target.id === "prefix") {
       syncBinStep();
       syncPrefixHint();
+      // The networks compatible with the typed prefix decide the CVV width and
+      // the custom-CVV placeholder, so they must be re-derived while typing.
+      syncCvvStep();
     }
     if (target.id === "quantity") syncQuantity();
     reportErrors();
