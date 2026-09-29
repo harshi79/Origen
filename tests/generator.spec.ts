@@ -215,7 +215,12 @@ test("masked templates keep all visible digits and generate only synthetic mask 
     await expect(page.locator("#prefix-error")).toBeHidden();
     await expect(page.locator("#detected")).toContainText(network);
     await generate(page);
-    await expect(page.locator("tbody tr")).toHaveCount(10);
+    await expect
+      .poll(async () => {
+        const rows = await numbers(page);
+        return rows.length === 10 && rows.every((number) => number.startsWith(visiblePrefix));
+      })
+      .toBe(true);
 
     const rows = await numbers(page);
     expect(
