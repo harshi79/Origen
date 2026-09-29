@@ -23,6 +23,7 @@ import {
 import {
   effectivePrefix,
   hasFieldErrors,
+  parseGeneratorInput,
   prepareGeneratorOptions,
   summarizeGeneratorForm,
   validateGeneratorForm,
@@ -54,10 +55,10 @@ export const generatorMarkup = `
       <section class="builder-step">
         <h3 class="step-head"><span class="step-index" aria-hidden="true">01</span><label for="prefix">BIN / IIN</label><span class="tiny-badge">SYNTHETIC</span></h3>
         <div class="bin-row">
-          <div class="input-with-icon"><i data-lucide="fingerprint" aria-hidden="true"></i><input id="prefix" name="prefix" type="text" inputmode="numeric" autocomplete="off" placeholder="e.g. 424242" aria-describedby="prefix-hint prefix-error"/><span class="input-end">6–8 digits</span></div>
+          <div class="input-with-icon"><i data-lucide="fingerprint" aria-hidden="true"></i><input id="prefix" name="prefix" type="text" inputmode="text" autocomplete="off" placeholder="e.g. 424242 or 5279109907xxxxxx" aria-describedby="prefix-hint prefix-error"/><span class="input-end">6–8 / masked</span></div>
           <label class="auto-switch" for="bin-auto"><input type="checkbox" id="bin-auto" name="binAuto"/><span class="switch-track" aria-hidden="true"></span><span class="switch-text">Auto</span></label>
         </div>
-        <p class="hint" id="prefix-hint">Enter 6–8 digits of a synthetic test prefix, or turn on Auto to build a network-compatible prefix locally.</p>
+        <p class="hint" id="prefix-hint">Enter a 6–8 digit synthetic prefix or a masked template with visible digits followed by x characters. Masked positions are generated locally.</p>
         <p class="field-error" id="prefix-error" hidden></p>
         <div class="sub-field"><label for="network">Network</label><div class="select-wrap no-icon"><select id="network" name="network"><option value="Auto">Auto</option>${NETWORKS.map((n) => `<option value="${n}">${displayName(n)}</option>`).join("")}<option value="Random">Random</option></select><i data-lucide="chevron-down" aria-hidden="true"></i></div></div>
         <p class="hint" id="network-hint">Auto detects the network from your BIN with local rules. Random picks any network compatible with it.</p>
@@ -157,7 +158,7 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
   }
   function optionsFor(values: GeneratorFormValues): GeneratorOptions {
     return prepareGeneratorOptions({
-      prefix: effectivePrefix(values),
+      prefix: values.binMode === "auto" ? "" : values.prefix,
       network: values.network,
       quantity: values.quantity,
       expiryMode: values.expiryMode,
@@ -202,7 +203,17 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
     prefix.disabled = auto;
     const detected = $("#detected");
     const values = formValues();
-    const compatible = values.prefix && !auto ? compatibleNetworks(values.prefix) : [];
+    let parsed: ReturnType<typeof parseGeneratorInput> | undefined;
+    if (values.prefix && !auto) {
+      try {
+        parsed = parseGeneratorInput(values.prefix);
+      } catch {
+        parsed = undefined;
+      }
+    }
+    const compatible = parsed?.generatorPrefix
+      ? compatibleNetworks(parsed.generatorPrefix)
+      : [];
     detected.hidden = false;
     if (auto) {
       detected.textContent = "Auto · a network-compatible synthetic prefix is built locally";
@@ -210,11 +221,14 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
     } else if (!values.prefix) {
       detected.textContent = "Waiting for a BIN / IIN, or turn on Auto";
       detected.dataset.state = "idle";
-    } else if (!/^\d{6,8}$/.test(values.prefix)) {
-      detected.textContent = "Not a valid 6–8 digit prefix yet";
+    } else if (!parsed) {
+      detected.textContent = "Enter a valid 6–8 digit prefix or masked template";
       detected.dataset.state = "warn";
     } else if (compatible.length) {
-      detected.textContent = `Detected locally · ${compatible.map(displayName).join(", ")}`;
+      const templateNote = parsed.templateLength
+        ? ` · ${parsed.templateLength - parsed.generatorPrefix.length} synthetic positions`
+        : "";
+      detected.textContent = `Detected locally${templateNote} · ${compatible.map(displayName).join(", ")}`;
       detected.dataset.state = "ok";
     } else {
       detected.textContent = "No supported test network matches these digits";
@@ -223,7 +237,9 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
     const hint = $("#prefix-hint");
     hint.textContent = auto
       ? "Auto mode: a network-compatible synthetic prefix is generated for each fixture."
-      : "Enter 6–8 digits of a synthetic test prefix, or turn on Auto.";
+      : parsed?.templateLength
+        ? `${parsed.generatorPrefix.length} visible digits are retained; ${parsed.templateLength - parsed.generatorPrefix.length} x positions are generated locally as synthetic digits.`
+        : "Enter a 6–8 digit synthetic prefix or a masked template with visible digits followed by x characters.";
   }
   function syncExpiryStep() {
     const custom = $<HTMLSelectElement>("#expiry-mode").value === "custom";
@@ -390,9 +406,18 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
   /** Local, offline network detection feedback for the BIN step. */
   function syncPrefixHint() {
     const values = formValues();
-    if (values.binMode !== "manual") return;
-    if (values.prefix.length < 6) return;
-    const compatible = compatibleNetworks(values.prefix);
+    if (values.binMode !== "manual" || !values.prefix) return;
+    let parsed: ReturnType<typeof parseGeneratorInput>;
+    try {
+      parsed = parseGeneratorInput(values.prefix);
+    } catch {
+      return;
+    }
+    if (parsed.templateLength) {
+      $("#prefix-hint").textContent = `${parsed.generatorPrefix.length} visible digits are retained; ${parsed.templateLength - parsed.generatorPrefix.length} x positions are generated locally as synthetic digits. Nothing is sent anywhere.`;
+      return;
+    }
+    const compatible = compatibleNetworks(parsed.generatorPrefix);
     $("#prefix-hint").textContent = compatible.length
       ? `Detected locally: ${compatible.map(displayName).join(", ")}. Nothing is sent anywhere.`
       : "No supported test network matches these digits.";

@@ -7,7 +7,7 @@ Community & updates: [Join Channel on Telegram](https://t.me/+y8EekRvqpnQzNjZl)
 ## Workspace Tabs
 
 1. **Generator**: 100% local synthetic card fixture generator, built as a five-step flow.
-   - **Step 1 · BIN / IIN** — enter an explicit 6–8 digit synthetic test prefix, or switch on **Auto** to have a network-compatible prefix built locally. Network is detected from the BIN with existing local rules (Auto / Random, or a pinned network).
+   - **Step 1 · BIN / IIN** — enter an explicit 6–8 digit synthetic test prefix, a masked template such as `5279109907xxxxxx`, or switch on **Auto** to have a network-compatible prefix built locally. A masked template retains every visible digit and fills each `x` position locally with synthetic data. Network is detected from the visible prefix with existing local rules (Auto / Random, or a pinned network).
      Nine networks are supported, each with its own prefix ranges, accepted number lengths and CVV width:
 
      | Network | Prefixes | Number length | CVV |
@@ -22,7 +22,7 @@ Community & updates: [Join Channel on Telegram](https://t.me/+y8EekRvqpnQzNjZl)
      | Maestro | `5018`, `5020`, `5038`, `56`–`69`, `6759`, `6761`–`6763` | 16–19 | 3 |
      | RuPay | `60`, `65`, `81`, `8214`–`8220` | 16 | 3 |
 
-     Some ranges are shared between schemes (`51`–`55`, `62`, `65`, `81`), exactly as they are in the real world. Auto/Random picks uniformly among the compatible networks, and the Card Sorter keeps the narrower original scheme first when a prefix matches more than one. Input is validated before anything is generated; full card numbers are never truncated into a prefix.
+     Some ranges are shared between schemes (`51`–`55`, `62`, `65`, `81`), exactly as they are in the real world. Auto/Random picks uniformly among the compatible networks, and the Card Sorter keeps the narrower original scheme first when a prefix matches more than one. Input is validated before anything is generated; complete unmasked card-like numbers are rejected and never truncated into a prefix.
    - **Step 2 · Expiry** — **Auto** creates a synthetic future month/year locally, or choose **Custom** month + year from the dropdowns. Past and current-month values are refused with an inline message.
    - **Step 3 · CVV** — **Auto** uses the network-appropriate synthetic length (4 digits for Amex, 3 for the rest), or enter a **Custom** value of the correct length. Custom CVVs stay in the page and are never sent anywhere.
    - **Step 4 · Quantity** — 1–100, with quick presets 1 / 5 / 10 / 25 / 50 / 100.

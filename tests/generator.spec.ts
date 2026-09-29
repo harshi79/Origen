@@ -160,7 +160,9 @@ test("BIN validation reports friendly inline errors and blocks generation", asyn
 
   // A full card number is never truncated into a BIN.
   await page.getByLabel("BIN / IIN", { exact: true }).fill("4242424242424242");
-  await expect(page.locator("#prefix-error")).toContainText("6–8 digits");
+  await expect(page.locator("#prefix-error")).toHaveText(
+    "Please enter a BIN/IIN prefix or masked synthetic template, not a complete card number.",
+  );
   await generate(page);
   await expect(page.locator("tbody tr")).toHaveCount(0);
 
@@ -196,6 +198,41 @@ test("BIN validation reports friendly inline errors and blocks generation", asyn
   expect(rows.every((value) => luhn(value))).toBe(true);
   for (const cell of await page.locator("tbody .cvv-cell").allTextContents())
     expect(cell).toMatch(/^\d{4}$/);
+});
+
+test("masked templates keep all visible digits and generate only synthetic mask positions", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const input = page.getByLabel("BIN / IIN", { exact: true });
+
+  for (const [template, visiblePrefix, network] of [
+    ["424242xxxxxxxxxx", "424242", "Visa"],
+    ["42424242XXXXXXXX", "42424242", "Visa"],
+    ["5279109907xxxxxx", "5279109907", "Mastercard"],
+  ]) {
+    await input.fill(template);
+    await expect(page.locator("#prefix-error")).toBeHidden();
+    await expect(page.locator("#detected")).toContainText(network);
+    await generate(page);
+    await expect
+      .poll(async () => {
+        const rows = await numbers(page);
+        return rows.length === 10 && rows.every((number) => number.startsWith(visiblePrefix));
+      })
+      .toBe(true);
+
+    const rows = await numbers(page);
+    expect(
+      rows.every(
+        (number) =>
+          number.startsWith(visiblePrefix) &&
+          number.length === 16 &&
+          /^\d+$/.test(number) &&
+          luhn(number),
+      ),
+    ).toBe(true);
+  }
 });
 
 test("Custom expiry and Custom CVV drive the generated fixtures", async ({ page }) => {

@@ -5,6 +5,8 @@
  * lookups, no verification. Numbers are Luhn-compatible because format checks
  * are what test fixtures are for — a valid checksum never means a real card.
  */
+import { COMPLETE_CARD_NUMBER_MESSAGE } from "./bin";
+
 export const NETWORKS = [
   "Visa",
   "Mastercard",
@@ -41,7 +43,10 @@ export interface CardRecord {
   synthetic: true;
 }
 export interface GeneratorOptions {
+  /** Numeric visible prefix only; mask characters are parsed before generation. */
   prefix: string;
+  /** Full input-template width when the user supplied a masked template. */
+  templateLength?: number;
   network: Network | "Random";
   quantity: number;
   expiryMode: ExpiryMode;
@@ -285,10 +290,29 @@ export function validateOptions(
   options: GeneratorOptions,
   now = new Date(),
 ): Network[] {
-  if (!/^\d{0,8}$/.test(options.prefix))
+  if (
+    options.templateLength === undefined &&
+    /^\d{14,19}$/.test(options.prefix)
+  )
+    throw new Error(COMPLETE_CARD_NUMBER_MESSAGE);
+
+  const hasMaskedTemplate = options.templateLength !== undefined;
+  const validOrdinaryPrefix =
+    !hasMaskedTemplate && /^\d{0,8}$/.test(options.prefix);
+  const validTemplatePrefix =
+    hasMaskedTemplate &&
+    /^\d{6,18}$/.test(options.prefix) &&
+    Number.isInteger(options.templateLength) &&
+    options.templateLength! >= 14 &&
+    options.templateLength! <= 19 &&
+    options.prefix.length + 1 < options.templateLength!;
+  if (!validOrdinaryPrefix && !validTemplatePrefix)
     throw new Error(
-      "BIN / IIN must contain 1–8 digits, or be blank for an automatic prefix.",
+      hasMaskedTemplate
+        ? "Use a valid masked synthetic template with at least two unspecified positions and a total width of 14–19."
+        : "BIN / IIN must contain 1–8 digits, or be blank for an automatic prefix.",
     );
+
   if (
     !Number.isInteger(options.quantity) ||
     options.quantity < 1 ||
@@ -297,16 +321,27 @@ export function validateOptions(
     throw new Error("Quantity must be a whole number between 1 and 100.");
   if (options.network !== "Random" && !NETWORKS.includes(options.network))
     throw new Error("Choose a supported card network.");
-  const networks =
+
+  const compatible =
     options.network === "Random"
       ? compatibleNetworks(options.prefix)
       : [options.network].filter(
-          (n) => compatibleRanges(options.prefix, n).length,
+          (network) => compatibleRanges(options.prefix, network).length,
         );
-  if (!networks.length)
+  const networks = hasMaskedTemplate
+    ? compatible.filter((network) =>
+        specs[network].lengths.includes(options.templateLength!),
+      )
+    : compatible;
+  if (!networks.length) {
+    if (hasMaskedTemplate && compatible.length)
+      throw new Error(
+        `A ${options.templateLength}-character masked template is not supported by ${options.network === "Random" ? "any compatible network" : options.network}. Adjust the x count or choose another network.`,
+      );
     throw new Error(
       `Prefix ${options.prefix} is not compatible with ${options.network === "Random" ? "a supported network" : options.network}. Choose another prefix or network.`,
     );
+  }
   if (!EXPIRY_MODES.includes(options.expiryMode))
     throw new Error("Choose a supported expiry mode.");
   const mode = resolveExpiryMode(options.expiryMode);
@@ -361,10 +396,11 @@ export function generateCards(
     // the prefix; otherwise keep the full range of accepted lengths.
     const required = options.prefix.length + 1;
     const length =
-      required > cardDigits(network)
+      options.templateLength ??
+      (required > cardDigits(network)
         ? lengths.find((candidate) => candidate >= required) ??
           lengths[lengths.length - 1]
-        : lengths[randomInt(0, lengths.length - 1)];
+        : lengths[randomInt(0, lengths.length - 1)]);
     while (body.length < length - 1) body += randomInt(0, 9);
     const expiry = dates[randomInt(0, dates.length - 1)];
     const digits = cvvDigits(network);

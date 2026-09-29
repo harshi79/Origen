@@ -118,6 +118,22 @@ describe("network matching and generation", () => {
     "rejects invalid prefix %s",
     (prefix) => expect(() => generate({ prefix })).toThrow(/1–8 digits/),
   );
+  it("rejects complete card-like values even at the low-level generator boundary", () => {
+    expect(() => generate({ prefix: "42424242424242" })).toThrow(
+      "Please enter a BIN/IIN prefix or masked synthetic template, not a complete card number.",
+    );
+  });
+  it("validates masked template widths and network-specific lengths", () => {
+    expect(() => generate({ prefix: "424242", templateLength: 12 })).toThrow(
+      /valid masked synthetic template/,
+    );
+    expect(() => generate({ prefix: "424242", templateLength: 14 })).toThrow(
+      /not supported by any compatible network/,
+    );
+    expect(
+      () => generate({ prefix: "424242", templateLength: 14, network: "Visa" }),
+    ).toThrow(/not supported by Visa/);
+  });
 });
 describe("extended network formats", () => {
   it.each([
