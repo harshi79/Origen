@@ -13,7 +13,6 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
 
 jobs:
   quality:
@@ -88,25 +87,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build the production image
-        run: |
-          set -o pipefail
-          docker build --progress=plain -t origen:ci . 2>&1 | tee docker-build.txt
-
-      # TEMPORARY: surface build failures on the PR while debugging.
-      - name: Comment Docker build failure
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo '### Docker build failure'
-            echo
-            echo '```'
-            tail -n 60 docker-build.txt || true
-            echo '```'
-          } > /tmp/docker-body.md
-          gh pr comment "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" --body-file /tmp/docker-body.md
+        run: docker build -t origen:ci .
 
       # Smoke-test the image the same way a platform would: start it, then hit
       # the health endpoint the Dockerfile HEALTHCHECK uses.
