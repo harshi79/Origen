@@ -19,6 +19,8 @@ test("brands the workspace as ORIGEN and links the Telegram channel", async ({
   );
   await expect(page.locator("#fixture, #card-lab-link")).toHaveCount(0);
   await expect(page.locator("body")).not.toContainText("Card Lab");
+  await expect(page.locator("body")).not.toContainText("Artificial Intelligence");
+  await expect(page.locator("body")).not.toContainText("AI-powered");
   const join = page.getByRole("link", { name: /Join Channel/i });
   await expect(join).toBeVisible();
   await expect(join).toHaveAttribute("href", "https://t.me/+y8EekRvqpnQzNjZl");
@@ -250,4 +252,56 @@ test('tabs navigate cleanly and BIN Lookup functions with mocked Guison response
   // Clear history in Settings
   await page.getByRole('button', { name: 'Clear history' }).click();
   await expect(page.locator('#settings-history-count')).toContainText('0');
+
+  // Header Generator link returns to Generator tab and restores aria-current
+  await expect(page.locator('#generator-link')).not.toHaveAttribute('aria-current', 'page');
+  await page.locator('#generator-link').click();
+  await expect(page.getByRole('tabpanel', { name: 'Generator' })).toBeVisible();
+  await expect(page.locator('#generator-link')).toHaveAttribute('aria-current', 'page');
+
+  // Keyboard navigation across tabs
+  await page.getByRole('tab', { name: 'Generator' }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByRole('tab', { name: 'BIN Lookup' })).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('End');
+  await expect(page.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('Home');
+  await expect(page.getByRole('tab', { name: 'Generator' })).toHaveAttribute('aria-selected', 'true');
 });
+
+test('supports generator keyboard shortcut, downloads, and responsive viewports from 320px to 1920px', async ({ page }) => {
+  // Generate via keyboard shortcut (Ctrl+Enter)
+  await page.getByLabel('BIN / IIN prefix').focus();
+  await page.keyboard.press('Control+Enter');
+  await expect(page.locator('tbody tr')).toHaveCount(10);
+
+  // Verify TXT, CSV, JSON fixture downloads
+  for (const ext of ['txt', 'csv', 'json'] as const) {
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.getByRole('button', { name: `Export ${ext.toUpperCase()}` }).click(),
+    ]);
+    expect(download.suggestedFilename()).toBe(`fixture-test-data.${ext}`);
+  }
+
+  // Sweep responsive viewports across all 4 tabs and Quick Guide dialog
+  for (const [width, height] of [
+    [320, 568],
+    [375, 667],
+    [390, 844],
+    [430, 932],
+    [768, 1024],
+    [1024, 768],
+    [1280, 800],
+    [1440, 900],
+    [1920, 1080],
+  ] as const) {
+    await page.setViewportSize({ width, height });
+    for (const tab of ['Generator', 'BIN Lookup', 'Card Sorter', 'Settings']) {
+      await page.getByRole('tab', { name: tab }).click();
+      const fits = await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+      expect(fits, `Horizontal overflow on ${tab} at ${width}x${height}`).toBe(true);
+    }
+  }
+});
+

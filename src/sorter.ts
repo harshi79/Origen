@@ -67,9 +67,14 @@ const YEAR_ONLY = /^\d{2}$|^\d{4}$/;
 const EXPIRY = /^(\d{1,2})\s*[/.-]\s*(\d{2}|\d{4})$/;
 const CVV = /^\d{3,4}$/;
 
+const MAX_PREFIX_CACHE = 4096;
+const prefixNetworkCache = new Map<string, Network | null>();
+const MAX_ANALYSIS_CACHE = 30_000;
+const lineAnalysisCache = new Map<string, LineAnalysis>();
+
 /** Split pasted text into lines, tolerating CRLF/CR and a final newline. */
 export function splitLines(text: string): string[] {
-  if (!text) return [];
+  if (typeof text !== "string" || !text) return [];
   const cleaned = text.replace(/^\uFEFF/, "").replace(/\r\n?/g, "\n");
   const lines = cleaned.split("\n");
   if (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
@@ -78,6 +83,7 @@ export function splitLines(text: string): string[] {
 
 /** Whitespace-insensitive identity of a raw line, used for line duplicates. */
 export function lineIdentity(text: string): string {
+  if (typeof text !== "string") return "";
   return text.replace(/\u200B/g, "").trim();
 }
 
@@ -102,9 +108,16 @@ function centuryYear(year: string): number {
 }
 
 export function detectNetwork(number: string): Network | null {
+  if (typeof number !== "string") return null;
   const digits = compactNumber(number);
   if (!NUMERIC_NUMBER.test(digits)) return null;
-  return compatibleNetworks(digits.slice(0, 6))[0] ?? null;
+  const prefix = digits.slice(0, 6);
+  const cached = prefixNetworkCache.get(prefix);
+  if (cached !== undefined) return cached;
+  const detected = compatibleNetworks(prefix)[0] ?? null;
+  if (prefixNetworkCache.size >= MAX_PREFIX_CACHE) prefixNetworkCache.clear();
+  prefixNetworkCache.set(prefix, detected);
+  return detected;
 }
 
 function record(
@@ -143,8 +156,17 @@ function parseExpiryField(value: string): { month: string; year: string } | null
 }
 
 export function analyzeLine(line: string): LineAnalysis {
-  const raw = line;
-  const fields = line
+  const raw = typeof line === "string" ? line : String(line ?? "");
+  const cached = lineAnalysisCache.get(raw);
+  if (cached !== undefined) return cached;
+  const result = computeLineAnalysis(raw);
+  if (lineAnalysisCache.size >= MAX_ANALYSIS_CACHE) lineAnalysisCache.clear();
+  lineAnalysisCache.set(raw, result);
+  return result;
+}
+
+function computeLineAnalysis(raw: string): LineAnalysis {
+  const fields = raw
     .replace(/\u200B/g, "")
     .split(FIELD_SPLIT)
     .map((field) => field.trim());

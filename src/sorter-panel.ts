@@ -144,6 +144,7 @@ export function mountSorterPanel(services: SorterPanelServices): { focusInput: (
   const output = $<HTMLTextAreaElement>("#sorter-output");
   const sortKeySelect = $<HTMLSelectElement>("#sorter-sort-key");
   let source = "";
+  let sourceLines: string[] = [];
   let entries: SorterEntry[] = [];
   let sortKey: SortKey = "line";
   let direction: SortDirection | null = null;
@@ -170,7 +171,6 @@ export function mountSorterPanel(services: SorterPanelServices): { focusInput: (
   }
 
   function render() {
-    const sourceLines = splitLines(source);
     const stats = sorterStats(sourceLines, entries);
     $<HTMLElement>("#sorter-stat-input").textContent = String(stats.inputLines);
     $<HTMLElement>("#sorter-stat-unique").textContent = String(stats.uniqueLines);
@@ -205,16 +205,17 @@ export function mountSorterPanel(services: SorterPanelServices): { focusInput: (
         ? `${icon("loader-circle", "spin")}<h3>Working through ${stats.inputLines} lines…</h3><p>Everything stays in this tab.</p>`
         : sourceLines.length
           ? `${icon("list-filter")}<h3>No lines left in the result.</h3><p>Re-paste the text, or use <strong>Clear</strong> to start over.</p>`
-          : `${icon("clipboard-paste")}<h3>Nothing sorted yet.</h3><p>Paste records on the left, or drop a text file.<br/>Cleaning happens instantly and locally.</p><div class="empty-code"><span>$</span> origen.cardSorter() <span class="cursor">▌</span></div>`;
+          : `${icon("clipboard-paste")}<h3>Nothing sorted yet.</h3><p>Paste records on the left, or drop a text file. Cleaning happens instantly and locally.</p><div class="empty-code"><span>$</span> origen.cardSorter() <span class="cursor">▌</span></div>`;
       wrap.append(state);
+      refreshIcons();
     }
     setBusy(busy);
-    refreshIcons();
   }
 
   function syncFromInput() {
     source = input.value;
-    entries = toEntries(splitLines(source));
+    sourceLines = splitLines(source);
+    entries = toEntries(sourceLines);
     direction = null;
     status = "";
     render();
@@ -331,6 +332,11 @@ export function mountSorterPanel(services: SorterPanelServices): { focusInput: (
     }
     try {
       const text = await file.text();
+      if (text.includes("\0")) {
+        showError(`“${file.name}” looks like a binary file. Card Sorter only reads plain text.`);
+        toast("Only plain-text files can be loaded.", "error");
+        return;
+      }
       input.value = text;
       syncFromInput();
       status = `Loaded ${file.name} · ${plural(lineCount(text), "line")}`;
@@ -370,6 +376,10 @@ export function mountSorterPanel(services: SorterPanelServices): { focusInput: (
     drop.classList.remove("dragging");
     const file = event.dataTransfer.files[0];
     if (file) void loadFile(file);
+  });
+  window.addEventListener("dragend", () => {
+    dragDepth = 0;
+    drop.classList.remove("dragging");
   });
 
   // --- cleaning actions ----------------------------------------------------
@@ -512,6 +522,7 @@ export function mountSorterPanel(services: SorterPanelServices): { focusInput: (
     flushPending();
     input.value = "";
     source = "";
+    sourceLines = [];
     entries = [];
     direction = null;
     status = "";
