@@ -90,13 +90,28 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run browser tests
-        run: npx playwright test --project=desktop --project=mobile
+        # Tee the run into the step summary so a failure is readable from the
+        # check-run output, not only from the downloadable job log.
+        run: |
+          set -o pipefail
+          npx playwright test --project=desktop --project=mobile \
+            --reporter=list 2>&1 | tee playwright-output.txt
 
-      - name: Upload Playwright report
+      - name: Publish failure details to the job summary
+        if: failure()
+        run: |
+          {
+            echo '### Playwright failures'
+            echo
+            echo '```'
+            grep -E '✘|✓|Error|expect|Received|Expected|at /' playwright-output.txt | tail -n 120 || true
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Playwright output
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report
-          retention-days: 7
-          if-no-files-found: ignore
+          name: playwright-output
+          path: playwright-output.txt
+          if-no-files-found: warn
