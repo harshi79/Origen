@@ -1,0 +1,17 @@
+# Keep the build context small and reproducible: the image installs its own
+# dependencies and builds from source.
+.git
+.gitignore
+.github
+node_modules
+dist
+coverage
+playwright-report
+test-results
+tests
+Dockerfile
+.dockerignore
+README.md
+LICENSE
+railway.json
+render.yaml

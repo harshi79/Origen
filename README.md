@@ -76,7 +76,8 @@ npm install
 npm run dev         # Starts Vite dev server on 0.0.0.0:5173
 npm run build       # Strict TypeScript check and production build (outputs dist/)
 npm start           # Serves the built dist/ on 0.0.0.0:$PORT (default 8080)
-npm test            # 373 Vitest unit tests + static-server integration tests
+npm test            # 378 Vitest unit tests + static-server integration tests
+npm run test:coverage  # Same suite with a V8 coverage report in coverage/
 npm run test:e2e    # Playwright browser tests across viewports (generator, BIN lookup, Card Sorter)
 npm run lint        # ESLint check
 ```
@@ -88,8 +89,9 @@ on demand:
 
 | Job | Node | Runs |
 | --- | --- | --- |
-| `quality` | 20 and 22 | `npm run lint`, `tsc --noEmit`, `vitest run` |
+| `quality` | 20 and 22 | `npm run lint`, `tsc --noEmit`, `npm run test:coverage` (uploads the coverage report) |
 | `build` | 22 | `npm run build`, `npm run test:server`, uploads `dist/` |
+| `docker` | 22 | `docker build`, then boots the container and hits `/healthz` |
 | `e2e` | 22 | `playwright test` on the `desktop` and `mobile` projects |
 
 `build` and `e2e` wait for `quality`, so a lint or type failure short-circuits the
@@ -105,6 +107,14 @@ build with `npm run build` and publish the `dist/` directory.
 
 **Web service / container hosts** (Railway, Render, Fly, Heroku, ...):
 the platform starts the app with the standard npm start command.
+
+**Docker**: a multi-stage `Dockerfile` builds the app and runs `server.js` as a
+non-root user, with a `/healthz` `HEALTHCHECK` baked in.
+
+```bash
+docker build -t origen .
+docker run --rm -p 8080:8080 origen
+```
 
 ```bash
 npm install
