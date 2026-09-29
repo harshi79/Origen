@@ -13,6 +13,9 @@ concurrency:
 
 permissions:
   contents: read
+  # Lets the e2e job post failure details back onto the pull request, which is
+  # readable without downloading job logs or artifacts.
+  pull-requests: write
 
 jobs:
   quality:
@@ -104,9 +107,26 @@ jobs:
             echo '### Playwright failures'
             echo
             echo '```'
-            grep -E '✘|✓|Error|expect|Received|Expected|at /' playwright-output.txt | tail -n 120 || true
+            grep -E '✘|Error|expect|Received|Expected|at /' playwright-output.txt | tail -n 120 || true
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
+
+      # Job logs and artifacts live on a separate storage host, so also post the
+      # failing assertions as a PR comment where they are easy to reach.
+      - name: Comment failure details on the pull request
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          {
+            echo '### Playwright failure details'
+            echo
+            echo '```'
+            grep -E '✘|Error:|expect\(|Received|Expected|locator' playwright-output.txt | tail -n 80 || true
+            echo '```'
+          } > /tmp/body.md
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" --body-file /tmp/body.md
 
       - name: Upload Playwright output
         if: failure()
