@@ -138,6 +138,34 @@ describe("masked synthetic templates", () => {
     },
   );
 
+  it("does not create a metadata prefix for empty input", () => {
+    expect(() => metadataLookupPrefix("")).toThrow(/6–8 digits/);
+  });
+
+  it("reports a masked template width unsupported by the detected network", () => {
+    const template = "424242xxxxxxxx";
+    expect(validate({ prefix: template }).network).toContain(
+      "No supported test network accepts this 14-character masked template",
+    );
+    expect(validate({ prefix: template, network: "Visa" }).network).toContain(
+      "Visa does not accept a 14-character masked template",
+    );
+  });
+
+  it("reports missing network matches and avoids a CVV error for malformed BIN input", () => {
+    const template = "999999xxxxxxxxxx";
+    expect(validate({ prefix: template }).network).toContain(
+      "No supported test network matches this BIN",
+    );
+    expect(validate({ prefix: template, network: "Visa" }).network).toContain(
+      "no supported network does",
+    );
+    expect(formNetworks(values({ prefix: "malformed" }))).toEqual([]);
+    expect(
+      validate({ prefix: "malformed", cvvMode: "custom", cvvValue: "123" }).cvv,
+    ).toBeUndefined();
+  });
+
   it.each([
     ["424242xxxxxxxxxx", "424242"],
     ["42424242xxxxxxxx", "42424242"],
