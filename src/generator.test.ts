@@ -201,6 +201,80 @@ describe("future expiry dates", () => {
     );
   });
 });
+describe("builder expiry modes (auto / custom)", () => {
+  it("treats auto as the existing random future expiry", () => {
+    for (const row of generate({ expiryMode: "auto", quantity: 100 }))
+      expect(Number(row.year) * 12 + Number(row.month)).toBeGreaterThan(
+        26 * 12 + 9,
+      );
+  });
+  it("treats custom as one fixed synthetic future month and year", () => {
+    const rows = generate({ expiryMode: "custom", month: 11, year: 2027 });
+    expect(rows.every((r) => r.month === "11" && r.year === "27")).toBe(true);
+  });
+  it.each([0, 13, 1.5, NaN])("rejects a custom month %s", (month) =>
+    expect(() => generate({ expiryMode: "custom", month, year: 2027 })).toThrow(
+      /month between/,
+    ),
+  );
+  it.each([2025, 2037, NaN, 2027.5])("rejects a custom year %s", (year) =>
+    expect(() => generate({ expiryMode: "custom", month: 5, year })).toThrow(
+      /next 10 years/,
+    ),
+  );
+  it("rejects a custom expiry in the current month", () =>
+    expect(() => generate({ expiryMode: "custom", month: 9, year: 2026 })).toThrow(
+      /after the current month/,
+    ));
+  it("rejects an unknown expiry mode", () =>
+    expect(() =>
+      generate({ expiryMode: "someday" as GeneratorOptions["expiryMode"] }),
+    ).toThrow(/supported expiry/));
+});
+describe("builder CVV modes (auto / custom)", () => {
+  it("auto keeps network-correct widths", () => {
+    for (const row of generate({ network: "American Express", quantity: 20 }))
+      expect(row.cvv).toMatch(/^\d{4}$/);
+    for (const row of generate({ network: "Visa", quantity: 20 }))
+      expect(row.cvv).toMatch(/^\d{3}$/);
+  });
+  it("custom applies the developer's synthetic value to every record", () => {
+    const rows = generate({
+      network: "Visa",
+      cvv: "custom",
+      cvvValue: "007",
+      quantity: 10,
+    });
+    expect(rows.every((r) => r.cvv === "007")).toBe(true);
+  });
+  it("custom supports the Amex width", () =>
+    expect(
+      generate({
+        network: "American Express",
+        cvv: "custom",
+        cvvValue: "0000",
+      })[0].cvv,
+    ).toBe("0000"));
+  it.each(["", "12", "12345", "abc", "12a", " 123", "１２３"])(
+    "rejects malformed custom CVV %j",
+    (cvvValue) =>
+      expect(() =>
+        generate({ network: "Visa", cvv: "custom", cvvValue }),
+      ).toThrow(/3 or 4 digits/),
+  );
+  it("rejects a custom CVV that cannot match the requested network", () =>
+    expect(() =>
+      generate({ network: "Visa", cvv: "custom", cvvValue: "1234" }),
+    ).toThrow(/3-digit CVV/));
+  it("rejects a custom CVV while networks have different widths", () =>
+    expect(() => generate({ network: "Random", cvv: "custom", cvvValue: "123" })).toThrow(
+      /only match one network length/,
+    ));
+  it("rejects an unknown CVV option", () =>
+    expect(() => generate({ cvv: "custom-length" as GeneratorOptions["cvv"] })).toThrow(
+      /supported CVV/,
+    ));
+});
 describe("output formatting", () => {
   const rows = generate({ network: "Visa", quantity: 2 });
   it("exports one pipe-separated record per line", () =>

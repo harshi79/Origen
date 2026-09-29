@@ -67,9 +67,9 @@ test("generates locally and all copy actions export the requested data", async (
       externalRequests.push(req.url());
   });
   await expect(page.getByText("Your next test starts here.")).toBeVisible();
-  await page.getByLabel("BIN / IIN prefix").fill("424242");
-  await page.getByLabel("Card network", { exact: true }).selectOption("Visa");
-  await page.getByRole("button", { name: "Generate test data" }).click();
+  await page.getByLabel("BIN / IIN", { exact: true }).fill("424242");
+  await page.getByLabel("Network", { exact: true }).selectOption("Visa");
+  await page.getByRole("button", { name: "Generate Test Data" }).click();
   await expect(page.locator("tbody tr")).toHaveCount(10);
   await expect(page.locator(".test-banner")).toContainText(
     "TEST DATA ONLY — NOT REAL PAYMENT CARDS",
@@ -86,7 +86,7 @@ test("generates locally and all copy actions export the requested data", async (
     (await page.evaluate(() => navigator.clipboard.readText())).split("\n")[0],
   ).toMatch(/^\d{16},\d{2},\d{2},\d{3}$/);
   await page
-    .getByRole("button", { name: "Copy test record 1", exact: true })
+    .getByRole("button", { name: "Copy synthetic test fixture 1", exact: true })
     .click();
   expect(
     (await page.evaluate(() => navigator.clipboard.readText())).split("\n"),
@@ -112,26 +112,34 @@ test("generates locally and all copy actions export the requested data", async (
 test("validates input, network, limits and expiry; supports theme and help", async ({
   page,
 }) => {
-  await page.getByLabel("BIN / IIN prefix").fill("abc");
-  await page.getByRole("button", { name: "Generate test data" }).click();
-  await expect(page.getByRole("alert")).toContainText("6–8 digits");
-  await page.getByLabel("BIN / IIN prefix").fill("424242");
+  await page.getByLabel("BIN / IIN", { exact: true }).fill("abc");
+  await page.getByRole("button", { name: "Generate Test Data" }).click();
+  await expect(page.locator("#prefix-error")).toContainText("6–8 digits");
+  await expect(page.getByRole("alert")).toContainText(
+    "Check the highlighted fields",
+  );
+  await page.getByLabel("BIN / IIN", { exact: true }).fill("424242");
   await page
-    .getByLabel("Card network", { exact: true })
+    .getByLabel("Network", { exact: true })
     .selectOption("American Express");
-  await page.getByRole("button", { name: "Generate test data" }).click();
-  await expect(page.getByRole("alert")).toContainText("not compatible");
-  await page.getByLabel("Card network", { exact: true }).selectOption("Visa");
-  await page.getByLabel("Number of records").fill("101");
-  await page.getByRole("button", { name: "Generate test data" }).click();
-  await expect(page.getByRole("alert")).toContainText("between 1 and 100");
+  await page.getByRole("button", { name: "Generate Test Data" }).click();
+  await expect(page.locator("#network-error")).toContainText(
+    "does not match this BIN",
+  );
+  await expect(page.locator("tbody tr")).toHaveCount(0);
+  await page.getByLabel("Network", { exact: true }).selectOption("Visa");
+  await page.getByLabel("Quantity", { exact: true }).fill("101");
+  await page.getByRole("button", { name: "Generate Test Data" }).click();
+  await expect(page.locator("#quantity-error")).toContainText(
+    "between 1 and 100",
+  );
   await page.getByRole("button", { name: "25", exact: true }).click();
-  await page.getByLabel("Expiration date").selectOption("fixed");
+  await page.getByLabel("Expiry", { exact: true }).selectOption("custom");
   await page.getByLabel("Month", { exact: true }).selectOption("12");
   await page
     .getByLabel("Year", { exact: true })
     .selectOption(String(new Date().getFullYear() + 1));
-  await page.getByRole("button", { name: "Generate test data" }).click();
+  await page.getByRole("button", { name: "Generate Test Data" }).click();
   await expect(page.locator("tbody tr")).toHaveCount(25);
   await page.getByRole("button", { name: "Switch to light theme" }).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme", "light");
@@ -160,7 +168,8 @@ test("empty and populated layouts stay within viewport", async ({
     path: `test-results/${testInfo.project.name}-empty.png`,
     fullPage: true,
   });
-  await page.getByRole("button", { name: "Generate test data" }).click();
+  await page.getByLabel("BIN / IIN", { exact: true }).fill("424242");
+  await page.getByRole("button", { name: "Generate Test Data" }).click();
   await expect(page.locator("tbody tr")).toHaveCount(10);
   expect(
     await page.evaluate(
@@ -271,7 +280,7 @@ test('tabs navigate cleanly and BIN Lookup functions with mocked Guison response
 
 test('supports generator keyboard shortcut, downloads, and responsive viewports from 320px to 1920px', async ({ page }) => {
   // Generate via keyboard shortcut (Ctrl+Enter)
-  await page.getByLabel('BIN / IIN prefix').focus();
+  await page.getByLabel('BIN / IIN', { exact: true }).fill('424242');
   await page.keyboard.press('Control+Enter');
   await expect(page.locator('tbody tr')).toHaveCount(10);
 
