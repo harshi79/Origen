@@ -1,9 +1,23 @@
 import {
   createIcons,
-  ArrowUpRight,
+  ArrowDownUp,
   ArrowRight,
+  ArrowUpRight,
   Braces,
   Check,
+  CircleAlert,
+  CircleSlash,
+  ClipboardPaste,
+  CopyX,
+  FileText,
+  FileUp,
+  ListFilter,
+  ListRestart,
+  Rows3,
+  SortAsc,
+  SortDesc,
+  TextCursorInput,
+  Wand2,
   ChevronDown,
   CircleHelp,
   Code2,
@@ -45,10 +59,24 @@ import { prepareGeneratorOptions, type GeneratorInput } from './generator-input'
 import { downloadFixtures, type ExportType } from './exports';
 import { tabsMarkup, extraPanelsMarkup, mountWorkspace } from './workspace';
 const icons = {
-  ArrowUpRight,
+  ArrowDownUp,
   ArrowRight,
+  ArrowUpRight,
   Braces,
   Check,
+  CircleAlert,
+  CircleSlash,
+  ClipboardPaste,
+  CopyX,
+  FileText,
+  FileUp,
+  ListFilter,
+  ListRestart,
+  Rows3,
+  SortAsc,
+  SortDesc,
+  TextCursorInput,
+  Wand2,
   ChevronDown,
   CircleHelp,
   Code2,
@@ -187,10 +215,11 @@ function render() {
   }
   refreshIcons();
 }
-function toast(message: string) {
+function toast(message: string, kind: "ok" | "error" = "ok") {
   clearTimeout(timer);
-  $("#toast").innerHTML = `${icon("check")}<span></span>`;
+  $("#toast").innerHTML = `${icon(kind === "error" ? "circle-alert" : "check")}<span></span>`;
   $("#toast span").textContent = message;
+  $("#toast").classList.toggle("toast-error", kind === "error");
   $("#toast").hidden = false;
   refreshIcons();
   timer = setTimeout(() => {

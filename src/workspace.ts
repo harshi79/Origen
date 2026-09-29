@@ -1,17 +1,19 @@
 import { validateBin } from './bin';
+import { mountSorterPanel, sorterMarkup } from './sorter-panel';
 import { checkApiStatus, formatMetadata, lookupBin, LookupError, LookupHistory, metadataEntries, type BinMetadata } from './guison';
-type Tab = 'generator' | 'lookup' | 'settings';
+type Tab = 'generator' | 'lookup' | 'sorter' | 'settings';
 interface WorkspaceServices {
   icon: (name: string, cls?: string) => string;
   refreshIcons: () => void;
-  toast: (message: string) => void;
+  toast: (message: string, kind?: 'ok' | 'error') => void;
   copy: (text: string, message: string) => Promise<void>;
   setTheme: (theme: 'light' | 'dark') => void;
 }
 export const tabsMarkup = `<div class="workspace-tabs" role="tablist" aria-label="Developer tools">
   <button id="tab-generator" role="tab" aria-controls="panel-generator" aria-selected="true" tabindex="0"><i data-lucide="zap" aria-hidden="true"></i>Generator<span class="tab-key">01</span></button>
   <button id="tab-lookup" role="tab" aria-controls="panel-lookup" aria-selected="false" tabindex="-1"><i data-lucide="fingerprint" aria-hidden="true"></i>BIN Lookup<span class="tab-key">02</span></button>
-  <button id="tab-settings" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1"><i data-lucide="sliders-horizontal" aria-hidden="true"></i>Settings<span class="tab-key">03</span></button>
+  <button id="tab-sorter" role="tab" aria-controls="panel-sorter" aria-selected="false" tabindex="-1"><i data-lucide="list-filter" aria-hidden="true"></i>Card Sorter<span class="tab-key">03</span></button>
+  <button id="tab-settings" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1"><i data-lucide="sliders-horizontal" aria-hidden="true"></i>Settings<span class="tab-key">04</span></button>
   <span class="tabs-status"><span class="status-dot"></span> A WORKSPACE FOR TESTING, NOT TRANSACTING</span>
 </div>`;
 export const extraPanelsMarkup = `
@@ -40,6 +42,7 @@ export const extraPanelsMarkup = `
   </div>
   <p class="attribution">Metadata source: Guison · <a href="https://github.com/venelinkochev/bin-list-data" target="_blank" rel="noopener noreferrer">venelinkochev/bin-list-data</a> · CC BY 4.0. Community data may be incomplete or outdated. Not authoritative payment information.</p>
 </section>
+${sorterMarkup}
 <section id="panel-settings" role="tabpanel" aria-labelledby="tab-settings" tabindex="0" hidden>
   <div class="settings-grid">
     <section class="panel settings-panel"><div class="panel-heading"><div><i data-lucide="sliders-horizontal" aria-hidden="true"></i><h2>Workspace preferences</h2></div><span class="step-tag">LOCAL</span></div>
@@ -54,11 +57,11 @@ export const extraPanelsMarkup = `
   </div>
 </section>`;
 
-export function mountWorkspace(services: WorkspaceServices): { activeTab: () => Tab } {
+export function mountWorkspace(services: WorkspaceServices): { activeTab: () => Tab; focusSorter: () => void } {
   const { icon, refreshIcons, toast, copy, setTheme } = services;
   const $ = <T extends HTMLElement>(id: string) => document.querySelector<T>(id)!;
   let active: Tab = 'generator';
-  const tabs: Tab[] = ['generator', 'lookup', 'settings'];
+  const tabs: Tab[] = ['generator', 'lookup', 'sorter', 'settings'];
   function selectTab(tab: Tab, focus = false) {
     active = tab;
     for (const id of tabs) {
@@ -67,7 +70,7 @@ export function mountWorkspace(services: WorkspaceServices): { activeTab: () => 
       $(`#panel-${id}`).hidden = id !== tab;
     }
     if (focus) $(`#tab-${tab}`).focus();
-    const headings = { generator: ['Payment card generator', 'Realistic fixtures. Zero real-world stakes. Build better payment experiences.'], lookup: ['A little context for your BIN', 'Understand the prefix. Never verify the card. Metadata for your development workflow.'], settings: ['Make yourself at home', 'A few preferences. Transparent connections. Clear boundaries.'] };
+    const headings = { generator: ['Payment card generator', 'Realistic fixtures. Zero real-world stakes. Build better payment experiences.'], lookup: ['A little context for your BIN', 'Understand the prefix. Never verify the card. Metadata for your development workflow.'], sorter: ['Sort your test data', 'Clean, dedupe and order pasted test records locally. Nothing is uploaded, verified or looked up.'], settings: ['Make yourself at home', 'A few preferences. Transparent connections. Clear boundaries.'] };
     $('h1').textContent = headings[tab][0];
     const dot = document.createElement('span'); dot.textContent = '.'; $('h1').append(dot);
     $('.intro p').textContent = headings[tab][1];
@@ -176,6 +179,7 @@ export function mountWorkspace(services: WorkspaceServices): { activeTab: () => 
     catch (error) { if (revision === statusRevision) updateStatus('Unavailable', (error as Error).message, 'warning'); }
     finally { statusCheck = null; $<HTMLButtonElement>('#check-api').disabled = false; }
   });
+  const sorter = mountSorterPanel({ icon, refreshIcons, toast, copy, isActive: () => active === 'sorter' });
   renderEmpty(); renderHistory();
-  return { activeTab: () => active };
+  return { activeTab: () => active, focusSorter: sorter.focusInput };
 }
