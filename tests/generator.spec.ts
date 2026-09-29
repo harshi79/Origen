@@ -392,11 +392,15 @@ test("extended networks are selectable and generate in their own formats", async
   // Pinning a network explains its accepted length and CVV width locally.
   await network.selectOption("JCB");
   await expect(page.locator("#network-hint")).toContainText("JCB · 16–19 digits · 3-digit CVV");
-  await expect(page.locator("#cvv-hint")).toContainText("3 digits for JCB");
+  // With no BIN entered every network is still compatible, so the CVV hint
+  // keeps describing the full Auto range rather than the pinned network.
+  await expect(page.locator("#cvv-hint")).toContainText("4 digits for Amex");
 
   // JCB prefixes generate inside the JCB window and stay Luhn-compatible.
   await page.getByLabel("BIN / IIN", { exact: true }).fill("353011");
   await expect(page.locator("#detected")).toContainText("JCB");
+  // Only JCB matches this prefix, so the CVV hint narrows to its width.
+  await expect(page.locator("#cvv-hint")).toContainText("3 digits for JCB");
   await generate(page);
   await expect(page.locator("tbody tr")).toHaveCount(10);
   expect(await page.locator("tbody .network-badge").allTextContents()).toEqual(
