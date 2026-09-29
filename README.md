@@ -45,9 +45,47 @@ Community & updates: [Join Channel on Telegram](https://t.me/+y8EekRvqpnQzNjZl)
 
 ```bash
 npm install
-npm run dev        # Starts Vite on 0.0.0.0:5173
-npm run test       # Runs 150 Vitest unit tests
-npm run test:e2e   # Runs Playwright browser tests across viewports
-npm run lint       # ESLint check
-npm run build      # Strict TypeScript check and production build
+npm run dev         # Starts Vite dev server on 0.0.0.0:5173
+npm run build       # Strict TypeScript check and production build (outputs dist/)
+npm start           # Serves the built dist/ on 0.0.0.0:$PORT (default 8080)
+npm test            # 150 Vitest unit tests + static-server integration tests
+npm run test:e2e    # Playwright browser tests across viewports
+npm run lint        # ESLint check
 ```
+
+## Deployment
+
+ORIGEN is a static, client-side app, so it can be hosted either as static files
+or as a long-running web service. This repository supports both.
+
+**Static hosting** (Netlify, Vercel, GitHub Pages, Cloudflare Pages, S3, ...):
+build with `npm run build` and publish the `dist/` directory.
+
+**Web service / container hosts** (Railway, Render, Fly, Heroku, ...):
+the platform starts the app with the standard npm start command.
+
+```bash
+npm install
+npm run build       # produces dist/
+npm start           # node server.js — serves dist/
+```
+
+`server.js` is a dependency-free Node static server that:
+
+- binds `0.0.0.0` and honours the platform-provided `PORT` variable (default `8080`),
+- serves `dist/` with correct MIME types, plus client-side routing fallback to `index.html`,
+- sends long-lived immutable cache headers for hashed assets and `no-cache` for the app shell,
+- exposes `GET /healthz` (returns `200 {"status":"ok"}` when the build is present) for health checks.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` | `8080` | Port to listen on (set automatically by most hosts) |
+| `HOST` | `0.0.0.0` | Interface to bind |
+| `ORIGEN_STATIC_DIR` | `./dist` | Directory of built files to serve |
+
+Host configuration is committed for the common platforms:
+
+- `railway.json` — build `npm install && npm run build`, start `node server.js`, health check `/healthz`.
+- `render.yaml` — Render blueprint with the same build/start commands.
+
+No start command needs to be set manually in the dashboard.
