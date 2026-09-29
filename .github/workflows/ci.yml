@@ -13,9 +13,6 @@ concurrency:
 
 permissions:
   contents: read
-  # Lets the e2e job post failure details back onto the pull request, which is
-  # readable without downloading job logs or artifacts.
-  pull-requests: write
 
 jobs:
   quality:
@@ -93,45 +90,13 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run browser tests
-        # Tee the run into the step summary so a failure is readable from the
-        # check-run output, not only from the downloadable job log.
-        run: |
-          set -o pipefail
-          npx playwright test --project=desktop --project=mobile \
-            --reporter=list 2>&1 | tee playwright-output.txt
+        run: npx playwright test --project=desktop --project=mobile
 
-      - name: Publish failure details to the job summary
-        if: failure()
-        run: |
-          {
-            echo '### Playwright failures'
-            echo
-            echo '```'
-            grep -E '✘|Error|expect|Received|Expected|at /' playwright-output.txt | tail -n 120 || true
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      # Job logs and artifacts live on a separate storage host, so also post the
-      # failing assertions as a PR comment where they are easy to reach.
-      - name: Comment failure details on the pull request
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          {
-            echo '### Playwright failure details'
-            echo
-            echo '```'
-            grep -E -A 12 '✘|Error:' playwright-output.txt | tail -n 160 || true
-            echo '```'
-          } > /tmp/body.md
-          gh pr comment "${{ github.event.pull_request.number }}" \
-            --repo "${{ github.repository }}" --body-file /tmp/body.md
-
-      - name: Upload Playwright output
+      - name: Upload Playwright report
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-output
-          path: playwright-output.txt
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
           if-no-files-found: warn
