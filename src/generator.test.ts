@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  cardDigits,
   cardLengths,
   checkDigit,
   compatibleNetworks,
@@ -184,6 +185,23 @@ describe("extended network formats", () => {
   it("never generates a number shorter than its prefix plus a check digit", () => {
     for (const row of generate({ prefix: "353011", network: "JCB", quantity: 50 }))
       expect(row.number.length).toBeGreaterThanOrEqual(7);
+  });
+  it("keeps the whole prefix even when it outruns the shortest variant", () => {
+    // Diners accepts 14 digits; an 8-digit prefix needs at least 9.
+    for (const row of generate({ prefix: "30569312", network: "Diners Club", quantity: 50 })) {
+      expect(row.number.startsWith("30569312")).toBe(true);
+      expect(row.number.length).toBeGreaterThanOrEqual(9);
+      expect(cardLengths("Diners Club")).toContain(row.number.length);
+      expect(luhnValid(row.number)).toBe(true);
+    }
+  });
+  it("reports the shortest accepted length per network", () => {
+    expect(cardDigits("American Express")).toBe(15);
+    expect(cardDigits("Diners Club")).toBe(14);
+    expect(cardDigits("Visa")).toBe(16);
+    expect(cardDigits("JCB")).toBe(16);
+    for (const network of NETWORKS)
+      expect(cardDigits(network)).toBe(cardLengths(network)[0]);
   });
   it("keeps overlapping ranges resolvable for every compatible network", () => {
     expect(compatibleNetworks("51")).toContain("Mastercard");

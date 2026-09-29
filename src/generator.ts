@@ -355,7 +355,16 @@ export function generateCards(
         ? options.prefix
         : String(randomInt(low, high)).padStart(width, "0");
     const lengths = specs[network].lengths;
-    const length = lengths[randomInt(0, lengths.length - 1)];
+    // A long explicit prefix can outrun a short variant: Diners accepts 14
+    // digits, so an 8-digit prefix leaves no room for a check digit. In that
+    // case fall back to the shortest length that fits rather than truncating
+    // the prefix; otherwise keep the full range of accepted lengths.
+    const required = options.prefix.length + 1;
+    const length =
+      required > cardDigits(network)
+        ? lengths.find((candidate) => candidate >= required) ??
+          lengths[lengths.length - 1]
+        : lengths[randomInt(0, lengths.length - 1)];
     while (body.length < length - 1) body += randomInt(0, 9);
     const expiry = dates[randomInt(0, dates.length - 1)];
     const digits = cvvDigits(network);
