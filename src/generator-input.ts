@@ -7,10 +7,11 @@
  */
 import { validateBin } from "./bin";
 import {
-  cardDigits,
+  cardLengths,
   compatibleNetworks,
   cvvDigits,
   displayName,
+  lengthLabel,
   resolveExpiryMode,
   type GeneratorOptions,
   type Network,
@@ -151,12 +152,10 @@ export function summarizeGeneratorForm(values: GeneratorFormValues): string {
       : names.length
         ? "Auto network"
         : "Network pending";
-  const widths = [...new Set(networks.map(cardDigits))].sort((a, b) => a - b);
-  const lengthLabel = widths.length
-    ? widths.length === 1
-      ? `${widths[0]} digits`
-      : `${widths[0]}–${widths[widths.length - 1]} digits`
-    : "length pending";
+  const widths = [
+    ...new Set(networks.flatMap((network) => [...cardLengths(network)])),
+  ];
+  const lengthLabelText = lengthLabel(widths);
   const mode = resolveExpiryMode(values.expiryMode);
   const expiryLabel =
     mode === "random"
@@ -176,7 +175,7 @@ export function summarizeGeneratorForm(values: GeneratorFormValues): string {
       : 0;
   return [
     networkLabel,
-    lengthLabel,
+    lengthLabelText,
     expiryLabel,
     cvvLabel,
     `${quantity} ${quantity === 1 ? "fixture" : "fixtures"}`,

@@ -10,6 +10,11 @@ export const NETWORKS = [
   "Mastercard",
   "American Express",
   "Discover",
+  "JCB",
+  "Diners Club",
+  "UnionPay",
+  "Maestro",
+  "RuPay",
 ] as const;
 export type Network = (typeof NETWORKS)[number];
 /**
@@ -56,34 +61,119 @@ const EXPIRY_MODES: ExpiryMode[] = [
 ];
 const CVV_OPTIONS: CvvOption[] = ["auto", "custom", "3", "4"];
 // Public network-format ranges, not a database of issued cards or accounts.
-const ranges: Record<Network, [number, number, number][]> = {
-  Visa: [[4, 4, 1]],
-  Mastercard: [
-    [51, 55, 2],
-    [2221, 2720, 4],
-  ],
-  "American Express": [
-    [34, 34, 2],
-    [37, 37, 2],
-  ],
-  Discover: [
-    [6011, 6011, 4],
-    [644, 649, 3],
-    [65, 65, 2],
-    [622126, 622925, 6],
-  ],
+// Each entry is [low, high, width] for the prefix window, then the accepted
+// number lengths and the CVV width. Ranges may overlap between networks (62 is
+// shared by Discover and UnionPay, 51–55 by Mastercard and Maestro); that is a
+// faithful reflection of the real scheme overlap, and the generator resolves it
+// by picking uniformly among the compatible networks.
+interface NetworkSpec {
+  /** [low, high, width] prefix windows accepted by this network. */
+  ranges: [number, number, number][];
+  /** Accepted PAN lengths, shortest first. */
+  lengths: readonly number[];
+  /** Synthetic CVV width: 4 digits for Amex, 3 for every other network. */
+  cvv: number;
+}
+const specs: Record<Network, NetworkSpec> = {
+  Visa: { ranges: [[4, 4, 1]], lengths: [16], cvv: 3 },
+  Mastercard: {
+    ranges: [
+      [51, 55, 2],
+      [2221, 2720, 4],
+    ],
+    lengths: [16],
+    cvv: 3,
+  },
+  "American Express": {
+    ranges: [
+      [34, 34, 2],
+      [37, 37, 2],
+    ],
+    lengths: [15],
+    cvv: 4,
+  },
+  Discover: {
+    ranges: [
+      [6011, 6011, 4],
+      [644, 649, 3],
+      [65, 65, 2],
+      [622126, 622925, 6],
+    ],
+    lengths: [16],
+    cvv: 3,
+  },
+  JCB: { ranges: [[3528, 3589, 4]], lengths: [16, 17, 18, 19], cvv: 3 },
+  "Diners Club": {
+    ranges: [
+      [300, 305, 3],
+      [3095, 3095, 4],
+      [36, 36, 2],
+      [38, 39, 2],
+    ],
+    lengths: [14, 15, 16, 17, 18, 19],
+    cvv: 3,
+  },
+  UnionPay: {
+    ranges: [
+      [62, 62, 2],
+      [81, 81, 2],
+    ],
+    lengths: [16, 17, 18, 19],
+    cvv: 3,
+  },
+  Maestro: {
+    ranges: [
+      [5018, 5018, 4],
+      [5020, 5020, 4],
+      [5038, 5038, 4],
+      [56, 69, 2],
+      [6759, 6759, 4],
+      [6761, 6763, 4],
+    ],
+    // The scheme allows 12–19; 16–19 is what payment gateways commonly accept.
+    lengths: [16, 17, 18, 19],
+    cvv: 3,
+  },
+  RuPay: {
+    ranges: [
+      [60, 60, 2],
+      [65, 65, 2],
+      [81, 81, 2],
+      [8214, 8220, 4],
+    ],
+    lengths: [16],
+    cvv: 3,
+  },
 };
-/** "American Express" is long for a summary line or a badge. */
+/** Short labels for summary lines and badges, where full names are too long. */
+const shortNames: Partial<Record<Network, string>> = {
+  "American Express": "Amex",
+  "Diners Club": "Diners",
+};
 export function displayName(network: Network): string {
-  return network === "American Express" ? "Amex" : network;
+  return shortNames[network] ?? network;
+}
+/** Accepted synthetic number lengths for a network, shortest first. */
+export function cardLengths(network: Network): readonly number[] {
+  return specs[network].lengths;
+}
+/** Human-readable length range, e.g. `16 digits` or `16–19 digits`. */
+export function lengthLabel(lengths: readonly number[]): string {
+  if (!lengths.length) return "length pending";
+  const sorted = [...lengths].sort((a, b) => a - b);
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  return first === last
+    ? `${first} digits`
+    : `${first}–${last} digits`;
 }
 /** Synthetic CVV width: 4 digits for Amex, 3 for every other network. */
 export function cvvDigits(network: Network): number {
-  return network === "American Express" ? 4 : 3;
+  return specs[network].cvv;
 }
-/** Test-format number length: 15 digits for Amex, 16 for every other network. */
+/** Test-format number length: the shortest accepted length for a network. */
 export function cardDigits(network: Network): number {
-  return network === "American Express" ? 15 : 16;
+  return specs[network].lengths[0];
 }
 /** Auto/Custom map onto the original generator modes without changing them. */
 export function resolveExpiryMode(mode: ExpiryMode): "random" | "month" | "year" | "fixed" {
@@ -126,7 +216,7 @@ function compatibleRanges(
   prefix: string,
   network: Network,
 ): [number, number, number][] {
-  return ranges[network].flatMap(([low, high, width]) => {
+  return specs[network].ranges.flatMap(([low, high, width]) => {
     if (!prefix) return [[low, high, width] as [number, number, number]];
     if (prefix.length >= width) {
       const value = Number(prefix.slice(0, width));
@@ -264,7 +354,8 @@ export function generateCards(
       options.prefix.length >= width
         ? options.prefix
         : String(randomInt(low, high)).padStart(width, "0");
-    const length = cardDigits(network);
+    const lengths = specs[network].lengths;
+    const length = lengths[randomInt(0, lengths.length - 1)];
     while (body.length < length - 1) body += randomInt(0, 9);
     const expiry = dates[randomInt(0, dates.length - 1)];
     const digits = cvvDigits(network);
@@ -295,7 +386,11 @@ export function formatRecords(
     .join("\n");
 }
 export function displayNumber(record: CardRecord): string {
-  return record.network === "American Express"
-    ? `${record.number.slice(0, 4)} ${record.number.slice(4, 10)} ${record.number.slice(10)}`
-    : record.number.match(/.{1,4}/g)!.join(" ");
+  if (record.network === "American Express")
+    // Classic 4-6-5 grouping for the 15-digit Amex shape.
+    return `${record.number.slice(0, 4)} ${record.number.slice(4, 10)} ${record.number.slice(10)}`;
+  if (record.network === "Diners Club" && record.number.length === 14)
+    // Classic 4-6-4 grouping for the 14-digit Diners shape.
+    return `${record.number.slice(0, 4)} ${record.number.slice(4, 10)} ${record.number.slice(10)}`;
+  return record.number.match(/.{1,4}/g)!.join(" ");
 }

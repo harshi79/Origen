@@ -257,7 +257,7 @@ describe("step 5 · generated fixture summary", () => {
     expect(summarizeGeneratorForm(values({ quantity: 1 }))).toContain("1 fixture"));
   it("summarizes Auto BIN mode across the compatible networks", () =>
     expect(summarizeGeneratorForm(values({ binMode: "auto", prefix: "" }))).toBe(
-      "Auto network · 15–16 digits · Auto expiry · Auto CVV · 10 fixtures",
+      "Auto network · 14–19 digits · Auto expiry · Auto CVV · 10 fixtures",
     ));
   it("summarizes a detected single network", () =>
     expect(summarizeGeneratorForm(values({ prefix: "424242" }))).toContain("Visa · 16 digits"));

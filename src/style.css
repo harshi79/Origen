@@ -1445,6 +1445,31 @@ tbody tr:hover {
   border-color: #d6a68d22;
   background: #d6a68d08;
 }
+.jcb {
+  color: #8fb4d6;
+  border-color: #8fb4d622;
+  background: #8fb4d608;
+}
+.diners-club {
+  color: #b7a3d4;
+  border-color: #b7a3d422;
+  background: #b7a3d408;
+}
+.unionpay {
+  color: #d69a9a;
+  border-color: #d69a9a22;
+  background: #d69a9a08;
+}
+.maestro {
+  color: #93b9d1;
+  border-color: #93b9d122;
+  background: #93b9d108;
+}
+.rupay {
+  color: #d1b28a;
+  border-color: #d1b28a22;
+  background: #d1b28a08;
+}
 .row-copy {
   min-width: 32px;
   min-height: 32px;
@@ -2545,6 +2570,21 @@ dialog .generate-button svg {
 }
 [data-theme="light"] .discover {
   color: #995b38;
+}
+[data-theme="light"] .jcb {
+  color: #2f5f85;
+}
+[data-theme="light"] .diners-club {
+  color: #5a4285;
+}
+[data-theme="light"] .unionpay {
+  color: #943535;
+}
+[data-theme="light"] .maestro {
+  color: #2c6183;
+}
+[data-theme="light"] .rupay {
+  color: #7a5722;
 }
 [data-theme="light"] .error,
 [data-theme="light"] .toast-error svg,

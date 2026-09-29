@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  cardLengths,
   checkDigit,
   compatibleNetworks,
+  cvvDigits,
+  displayName,
   displayNumber,
   formatRecords,
   generateCards,
+  lengthLabel,
   luhnValid,
   NETWORKS,
   validateOptions,
@@ -46,14 +50,14 @@ describe("network matching and generation", () => {
     (network) => {
       const rows = generate({ network, quantity: 100 });
       expect(rows).toHaveLength(100);
+      const lengths = cardLengths(network);
+      const cvvWidth = cvvDigits(network);
       for (const row of rows) {
         expect(row.network).toBe(network);
         expect(row.synthetic).toBe(true);
-        expect(row.number).toHaveLength(
-          network === "American Express" ? 15 : 16,
-        );
+        expect(lengths).toContain(row.number.length);
         expect(row.cvv).toMatch(
-          network === "American Express" ? /^\d{4}$/ : /^\d{3}$/,
+          new RegExp(`^\\d{${cvvWidth}}$`),
         );
         expect(luhnValid(row.number)).toBe(true);
         expect(compatibleNetworks(row.number)).toContain(network);
@@ -113,6 +117,96 @@ describe("network matching and generation", () => {
     "rejects invalid prefix %s",
     (prefix) => expect(() => generate({ prefix })).toThrow(/1–8 digits/),
   );
+});
+describe("extended network formats", () => {
+  it.each([
+    ["3528", "JCB"],
+    ["3589", "JCB"],
+    ["353011", "JCB"],
+    ["300", "Diners Club"],
+    ["305", "Diners Club"],
+    ["3095", "Diners Club"],
+    ["36", "Diners Club"],
+    ["38", "Diners Club"],
+    ["39", "Diners Club"],
+    ["62", "UnionPay"],
+    ["81", "UnionPay"],
+    ["5018", "Maestro"],
+    ["5020", "Maestro"],
+    ["5038", "Maestro"],
+    ["56", "Maestro"],
+    ["6759", "Maestro"],
+    ["6761", "Maestro"],
+    ["6763", "Maestro"],
+    ["60", "RuPay"],
+    ["65", "RuPay"],
+    ["8214", "RuPay"],
+    ["8220", "RuPay"],
+  ] as const)("preserves requested prefix %s for %s", (prefix, network) => {
+    for (const row of generate({ prefix, network, quantity: 5 })) {
+      expect(row.network).toBe(network);
+      expect(row.number.startsWith(prefix)).toBe(true);
+      expect(luhnValid(row.number)).toBe(true);
+    }
+  });
+  it.each([
+    ["3527", "JCB"],
+    ["3590", "JCB"],
+    ["306", "Diners Club"],
+    ["37", "Diners Club"],
+    ["622125", "Discover"],
+    ["643", "Discover"],
+    ["5019", "Maestro"],
+    ["55", "Maestro"],
+    ["70", "Maestro"],
+    ["90", "Maestro"],
+    ["8213", "RuPay"],
+    ["8221", "RuPay"],
+  ] as const)("rejects out-of-range %s / %s", (prefix, network) =>
+    expect(() => generate({ prefix, network })).toThrow(/not compatible/),
+  );
+  it("builds every accepted length for a variable-length network", () => {
+    for (const network of [
+      "JCB",
+      "UnionPay",
+      "Maestro",
+      "Diners Club",
+    ] as const) {
+      const lengths = cardLengths(network);
+      const seen = new Set<number>();
+      // Quantity is capped at 100 per run, so sample repeatedly instead.
+      for (let run = 0; run < 40; run += 1)
+        for (const row of generate({ network, quantity: 100 }))
+          seen.add(row.number.length);
+      expect([...seen].sort((a, b) => a - b)).toEqual([...lengths]);
+    }
+  });
+  it("never generates a number shorter than its prefix plus a check digit", () => {
+    for (const row of generate({ prefix: "353011", network: "JCB", quantity: 50 }))
+      expect(row.number.length).toBeGreaterThanOrEqual(7);
+  });
+  it("keeps overlapping ranges resolvable for every compatible network", () => {
+    expect(compatibleNetworks("51")).toContain("Mastercard");
+    expect(compatibleNetworks("56")).toContain("Maestro");
+    expect(compatibleNetworks("62")).toContain("Discover");
+    expect(compatibleNetworks("62")).toContain("UnionPay");
+    expect(compatibleNetworks("65")).toContain("Discover");
+    expect(compatibleNetworks("65")).toContain("RuPay");
+    expect(compatibleNetworks("81")).toContain("UnionPay");
+    expect(compatibleNetworks("81")).toContain("RuPay");
+  });
+  it("reports a length range for variable-length networks", () => {
+    expect(cardLengths("Diners Club")).toEqual([14, 15, 16, 17, 18, 19]);
+    expect(cardLengths("Visa")).toEqual([16]);
+    expect(lengthLabel([16])).toBe("16 digits");
+    expect(lengthLabel([14, 15, 16, 17, 18, 19])).toBe("14–19 digits");
+    expect(lengthLabel([])).toBe("length pending");
+  });
+  it("shortens long names for badges and summaries", () => {
+    expect(displayName("Diners Club")).toBe("Diners");
+    expect(displayName("American Express")).toBe("Amex");
+    expect(displayName("UnionPay")).toBe("UnionPay");
+  });
 });
 describe("limits and CVV validation", () => {
   it.each([0, -1, 101, 1.5, Infinity, NaN])("rejects quantity %s", (quantity) =>
