@@ -1,14 +1,20 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   effectivePrefix,
   formNetworks,
   hasFieldErrors,
+  metadataLookupPrefix,
+  parseGeneratorInput,
   prepareGeneratorOptions,
   summarizeGeneratorForm,
   validateGeneratorForm,
   type GeneratorFormValues,
 } from "./generator-input";
 import { generateCards, luhnValid } from "./generator";
+import { GUISON_ORIGIN, lookupBin } from "./guison";
+import { guisonFixture } from "../tests/fixtures/guison";
+
+afterEach(() => vi.unstubAllGlobals());
 
 const now = new Date(2026, 8, 29);
 const Y = now.getFullYear();
@@ -35,7 +41,8 @@ const generate = (
 ) =>
   generateCards(
     prepareGeneratorOptions({
-      prefix: effectivePrefix(values(overrides)),
+      prefix:
+        values(overrides).binMode === "auto" ? "" : values(overrides).prefix,
       network: values(overrides).network,
       quantity,
       expiryMode: values(overrides).expiryMode,
@@ -56,7 +63,6 @@ describe("step 1 · BIN / IIN validation", () => {
     ["", "Enter a 6–8 digit"],
     ["4242", "6–8 digits"],
     ["4242424 2", "6–8 digits"],
-    ["4242424242424242", "6–8 digits"],
     ["abc", "6–8 digits"],
     ["4e1234", "6–8 digits"],
     ["4242-42", "6–8 digits"],
@@ -69,12 +75,103 @@ describe("step 1 · BIN / IIN validation", () => {
     expect(validate({ prefix }).prefix).toBeTruthy();
     expect(() => generate({ prefix })).toThrow();
   });
+  it.each([14, 15, 16, 17, 19])(
+    "rejects a complete unmasked %s-digit card-like value with the explicit message",
+    (length) => {
+      const value = "4".repeat(length);
+      expect(validate({ prefix: value }).prefix).toBe(
+        "Please enter a BIN/IIN prefix or masked synthetic template, not a complete card number.",
+      );
+      expect(() => parseGeneratorInput(value)).toThrow(
+        "Please enter a BIN/IIN prefix or masked synthetic template, not a complete card number.",
+      );
+    },
+  );
   it("allows an empty BIN when Auto mode is on", () => {
     expect(validate({ binMode: "auto", prefix: "" })).toEqual({});
     expect(effectivePrefix({ binMode: "auto", prefix: "424242" })).toBe("");
   });
   it("ignores typed digits while Auto mode is on", () => {
     expect(generate({ binMode: "auto", prefix: "4" }, 20).length).toBe(20);
+  });
+});
+
+describe("masked synthetic templates", () => {
+  it.each([
+    ["424242xxxxxxxxxx", "424242", "424242"],
+    ["42424242xxxxxxxx", "42424242", "42424242"],
+    ["5279109907xxxxxx", "5279109907", "52791099"],
+  ])(
+    "splits %s into a metadata prefix and the full generator prefix",
+    (template, generatorPrefix, metadataPrefix) => {
+      expect(parseGeneratorInput(template)).toMatchObject({
+        generatorPrefix,
+        metadataPrefix,
+        templateLength: 16,
+      });
+      expect(metadataLookupPrefix(template)).toBe(metadataPrefix);
+      expect(effectivePrefix(values({ prefix: template }))).toBe(generatorPrefix);
+      expect(validate({ prefix: template })).toEqual({});
+
+      const rows = generate({ prefix: template, network: "Auto" }, 10);
+      expect(rows).toHaveLength(10);
+      expect(
+        rows.every(
+          (row) =>
+            row.number.startsWith(generatorPrefix) &&
+            row.number.length === 16 &&
+            /^\d+$/.test(row.number) &&
+            luhnValid(row.number),
+        ),
+      ).toBe(true);
+      expect(rows.every((row) => !row.number.includes("x"))).toBe(true);
+    },
+  );
+
+  it.each(["424242xxxxxxxxxx", "424242XXXXXXXXXX", "424242xxxxXXXXXX"])(
+    "accepts lower- and uppercase x mask characters in %s",
+    (template) => {
+      expect(parseGeneratorInput(template).templateLength).toBe(16);
+      expect(generate({ prefix: template }, 2).every((row) => row.number.length === 16)).toBe(
+        true,
+      );
+    },
+  );
+
+  it.each([
+    ["424242xxxxxxxxxx", "424242"],
+    ["42424242xxxxxxxx", "42424242"],
+    ["5279109907xxxxxx", "52791099"],
+  ])("sends only the safe metadata prefix for %s", async (template, metadataPrefix) => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(guisonFixture(metadataPrefix)), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await lookupBin(metadataLookupPrefix(template));
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      `${GUISON_ORIGIN}/v1/bin/${metadataPrefix}`,
+    );
+    expect(String(fetchMock.mock.calls[0][0])).not.toContain(template);
+    expect(String(fetchMock.mock.calls[0][0])).not.toMatch(/[xX]/);
+  });
+
+  it.each([
+    "424242xx123456",
+    "424242xxxxxx1234",
+    "424242 2xxxxxxx",
+    "xxxxxx",
+    "424242xxxxx",
+    "42424242424242x",
+    `424242${"x".repeat(20)}`,
+  ])("rejects malformed masked template %j", (template) => {
+    expect(() => parseGeneratorInput(template)).toThrow();
+    expect(validate({ prefix: template }).prefix).toBeTruthy();
+    expect(() => generate({ prefix: template })).toThrow();
   });
 });
 

@@ -5,7 +5,7 @@
  * generate) into the low-level generator options and produces friendly,
  * field-scoped validation messages. Nothing here ever leaves the page.
  */
-import { validateBin } from "./bin";
+import { COMPLETE_CARD_NUMBER_MESSAGE, validateBin } from "./bin";
 import {
   cardLengths,
   compatibleNetworks,
@@ -16,14 +16,88 @@ import {
   type GeneratorOptions,
   type Network,
 } from "./generator";
+
+export interface ParsedGeneratorInput {
+  /** The safe 6–8 digit value accepted by the existing BIN metadata boundary. */
+  metadataPrefix: string;
+  /** Every user-visible digit, retained as the local synthetic generator prefix. */
+  generatorPrefix: string;
+  /** Full template width, including x positions; absent for an ordinary BIN/IIN. */
+  templateLength?: number;
+}
+
+const INVALID_GENERATOR_INPUT_MESSAGE =
+  "Enter a synthetic BIN / IIN prefix of 6–8 digits, or a valid masked template with visible digits followed by x characters.";
+const INVALID_MASKED_TEMPLATE_MESSAGE =
+  "Enter a valid 14–19 character masked template: at least 6 visible digits followed by at least two x characters.";
+
+/**
+ * Split a manual Generator value into its independent metadata and generation
+ * inputs. Mask characters are only placeholders: they are never converted to
+ * digits or sent through the metadata boundary.
+ */
+export function parseGeneratorInput(value: string): ParsedGeneratorInput {
+  if (value === "")
+    return { metadataPrefix: "", generatorPrefix: "" };
+
+  if (/^\d+$/.test(value)) {
+    if (/^\d{14,19}$/.test(value))
+      throw new Error(COMPLETE_CARD_NUMBER_MESSAGE);
+    if (/^\d{6,8}$/.test(value)) {
+      validateBin(value);
+      return {
+        metadataPrefix: value,
+        generatorPrefix: value,
+      };
+    }
+    throw new Error(INVALID_GENERATOR_INPUT_MESSAGE);
+  }
+
+  const masked = /^(\d+)(x+)$/i.exec(value);
+  if (!masked) {
+    throw new Error(
+      /x/i.test(value)
+        ? INVALID_MASKED_TEMPLATE_MESSAGE
+        : INVALID_GENERATOR_INPUT_MESSAGE,
+    );
+  }
+
+  const [, visibleDigits, masks] = masked;
+  const templateLength = visibleDigits.length + masks.length;
+  if (
+    visibleDigits.length < 6 ||
+    masks.length < 2 ||
+    templateLength < 14 ||
+    templateLength > 19
+  )
+    throw new Error(INVALID_MASKED_TEMPLATE_MESSAGE);
+
+  const metadataPrefix = visibleDigits.slice(0, 8);
+  validateBin(metadataPrefix);
+  return {
+    metadataPrefix,
+    generatorPrefix: visibleDigits,
+    templateLength,
+  };
+}
+
+/** Only this derived value may be passed to the existing metadata service. */
+export function metadataLookupPrefix(value: string): string {
+  const prefix = parseGeneratorInput(value).metadataPrefix;
+  if (!prefix) throw new Error(INVALID_GENERATOR_INPUT_MESSAGE);
+  return prefix;
+}
+
 export type GeneratorInput = Omit<GeneratorOptions, "network"> & {
   network: GeneratorOptions["network"] | "Auto";
 };
 /** Auto is the builder-facing alias for "use the existing generator rules". */
 export function prepareGeneratorOptions(input: GeneratorInput): GeneratorOptions {
-  if (input.prefix !== "") validateBin(input.prefix);
+  const parsed = parseGeneratorInput(input.prefix);
   return {
     ...input,
+    prefix: parsed.generatorPrefix,
+    templateLength: parsed.templateLength,
     network: input.network === "Auto" ? "Random" : input.network,
     cvvValue: input.cvv === "custom" ? input.cvvValue : undefined,
   };
@@ -52,16 +126,38 @@ export interface GeneratorFieldErrors {
 export function hasFieldErrors(errors: GeneratorFieldErrors): boolean {
   return Object.keys(errors).length > 0;
 }
-/** The BIN actually used for generation: Auto mode never reads typed digits. */
+/** The numeric prefix used for generation; Auto never reads typed digits. */
 export function effectivePrefix(
   values: Pick<GeneratorFormValues, "binMode" | "prefix">,
 ): string {
-  return values.binMode === "auto" ? "" : values.prefix;
+  if (values.binMode === "auto") return "";
+  try {
+    return parseGeneratorInput(values.prefix).generatorPrefix;
+  } catch {
+    // Keep typing/editing paths non-throwing; validation blocks malformed input.
+    return values.prefix;
+  }
 }
-/** Networks compatible with the current BIN selection, per the existing rules. */
+function parsedManualInput(
+  values: Pick<GeneratorFormValues, "binMode" | "prefix">,
+): ParsedGeneratorInput | undefined {
+  if (values.binMode === "auto" || values.prefix === "") return undefined;
+  try {
+    return parseGeneratorInput(values.prefix);
+  } catch {
+    return undefined;
+  }
+}
+/** Networks compatible with the current BIN and, for templates, their width. */
 export function formNetworks(values: GeneratorFormValues): Network[] {
   const prefix = effectivePrefix(values);
-  const compatible = compatibleNetworks(prefix);
+  const parsed = parsedManualInput(values);
+  if (values.binMode === "manual" && values.prefix && !parsed) return [];
+  const compatible = compatibleNetworks(prefix).filter(
+    (network) =>
+      parsed?.templateLength === undefined ||
+      cardLengths(network).includes(parsed.templateLength),
+  );
   if (values.network === "Auto" || values.network === "Random")
     return compatible;
   return compatible.includes(values.network) ? [values.network] : [];
@@ -106,12 +202,14 @@ export function validateGeneratorForm(
 ): GeneratorFieldErrors {
   const errors: GeneratorFieldErrors = {};
   const prefix = effectivePrefix(values);
+  const parsed = parsedManualInput(values);
   if (values.binMode === "manual") {
     if (prefix === "")
-      errors.prefix = "Enter a 6–8 digit synthetic BIN / IIN, or turn on Auto.";
+      errors.prefix =
+        "Enter a 6–8 digit synthetic BIN / IIN prefix or masked template, or turn on Auto.";
     else {
       try {
-        validateBin(prefix);
+        parseGeneratorInput(values.prefix);
       } catch (error) {
         errors.prefix = (error as Error).message;
       }
@@ -120,12 +218,24 @@ export function validateGeneratorForm(
   const networks = errors.prefix ? [] : formNetworks(values);
   if (!errors.prefix && !networks.length) {
     const compatible = compatibleNetworks(prefix);
-    errors.network =
-      values.network === "Auto" || values.network === "Random"
-        ? "No supported test network matches this BIN. Check the digits, or turn on Auto."
-        : compatible.length
-          ? `${displayName(values.network)} does not match this BIN. Compatible here: ${compatible.map(displayName).join(", ")}.`
-          : `${displayName(values.network)} does not match this BIN, and no supported network does. Check the digits, or turn on Auto.`;
+    const lengthCompatible = parsed?.templateLength
+      ? compatible.filter((network) =>
+          cardLengths(network).includes(parsed.templateLength!),
+        )
+      : compatible;
+    if (parsed?.templateLength && compatible.length && !lengthCompatible.length) {
+      errors.network =
+        values.network === "Auto" || values.network === "Random"
+          ? `No supported test network accepts this ${parsed.templateLength}-character masked template. Adjust the x count.`
+          : `${displayName(values.network)} does not accept a ${parsed.templateLength}-character masked template. Adjust the x count.`;
+    } else {
+      errors.network =
+        values.network === "Auto" || values.network === "Random"
+          ? "No supported test network matches this BIN. Check the digits, or turn on Auto."
+          : compatible.length
+            ? `${displayName(values.network)} does not match this BIN. Compatible here: ${compatible.map(displayName).join(", ")}.`
+            : `${displayName(values.network)} does not match this BIN, and no supported network does. Check the digits, or turn on Auto.`;
+    }
   }
   const expiry = expiryError(values, now);
   if (expiry) errors.expiry = expiry;
