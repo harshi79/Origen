@@ -100,8 +100,19 @@ describe("local network detection", () => {
     ["378282246310005", "American Express"],
     ["6011111111111117", "Discover"],
     ["6221260000000000", "Discover"],
+    ["3530111234567890", "JCB"],
+    ["30569309025904", "Diners Club"],
+    ["6212345678901232", "UnionPay"],
+    ["6759649826438453", "Maestro"],
   ] as const)("detects %s locally as %s", (number, network) => {
     expect(detectNetwork(number)).toBe(network);
+  });
+  it("prefers the narrower original scheme on an overlapping prefix", () => {
+    // 6011 and 65 are valid RuPay ranges too; Discover keeps precedence.
+    expect(detectNetwork("6011111111111117")).toBe("Discover");
+    expect(detectNetwork("6500000000000002")).toBe("Discover");
+    // 51–55 is also a Maestro range; Mastercard keeps precedence.
+    expect(detectNetwork("5555555555554444")).toBe("Mastercard");
   });
   it("never guesses a network it cannot detect", () => {
     expect(detectNetwork("9999999999999999")).toBeNull();

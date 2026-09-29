@@ -7,11 +7,14 @@
  * page, and generated rows are labeled `SYNTHETIC TEST FIXTURE`.
  */
 import {
+  cardLengths,
   compatibleNetworks,
+  cvvDigits,
   displayName,
   displayNumber,
   formatRecords,
   generateCards,
+  lengthLabel,
   NETWORKS,
   type CardRecord,
   type GeneratorOptions,
@@ -74,7 +77,7 @@ export const generatorMarkup = `
       <section class="builder-step">
         <h3 class="step-head"><span class="step-index" aria-hidden="true">03</span><label for="cvv-mode">CVV</label><span class="tiny-badge">STAYS LOCAL</span></h3>
         <div class="select-wrap no-icon"><select id="cvv-mode" name="cvv"><option value="auto">Auto</option><option value="custom">Custom</option></select><i data-lucide="chevron-down" aria-hidden="true"></i></div>
-        <p class="hint" id="cvv-hint">Auto matches the network: 3 digits for most, 4 for Amex.</p>
+        <p class="hint" id="cvv-hint">Auto matches the network: 3 digits for most networks, 4 for Amex.</p>
         <div class="custom-fields" id="cvv-fields" hidden>
           <div class="cvv-field"><label for="cvv-value">Custom CVV</label><div class="input-with-icon"><i data-lucide="lock-keyhole" aria-hidden="true"></i><input id="cvv-value" name="cvvValue" type="text" inputmode="numeric" autocomplete="off" placeholder="000" aria-describedby="cvv-value-hint cvv-error"/><span class="input-end" id="cvv-length">3 digits</span></div><p class="hint" id="cvv-value-hint">Synthetic digits only. Never sent anywhere.</p></div>
         </div>
@@ -229,17 +232,27 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
       ? "Pick a synthetic future month and year."
       : "Auto creates a synthetic future expiry locally.";
   }
+  function syncNetworkStep() {
+    const hint = $("#network-hint");
+    const selected = $<HTMLSelectElement>("#network").value;
+    const pinned = NETWORKS.find((network) => network === selected);
+    hint.textContent = pinned
+      ? `${displayName(pinned)} · ${lengthLabel(cardLengths(pinned))} · ${cvvDigits(pinned)}-digit CVV. Detected locally from your BIN.`
+      : "Auto detects the network from your BIN with local rules. Random picks any network compatible with it.";
+  }
   function syncCvvStep() {
     const custom = $<HTMLSelectElement>("#cvv-mode").value === "custom";
     $("#cvv-fields").hidden = !custom;
     const networks = compatibleNetworks(effectivePrefix(formValues()));
-    const widths = [...new Set(networks.map((network) => (network === "American Express" ? 4 : 3)))];
+    const widths = [...new Set(networks.map(cvvDigits))];
     const lengths = widths.length === 1 ? widths : [3, 4];
     $("#cvv-length").textContent = `${lengths[0]} digits`;
     $<HTMLInputElement>("#cvv-value").placeholder = "0".repeat(lengths[0]);
     $("#cvv-hint").textContent = custom
       ? `Custom values stay in this page. Allowed length here: ${lengths.join(" or ")} digits.`
-      : "Auto matches the network: 3 digits for most, 4 for Amex.";
+      : widths.length === 1
+        ? `Auto matches the network: ${lengths[0]} digits${networks.length === 1 ? ` for ${displayName(networks[0])}` : ""}.`
+        : "Auto matches each network: 4 digits for Amex, 3 for the rest.";
   }
   function syncQuantity() {
     const quantity = $<HTMLInputElement>("#quantity").value;
@@ -253,6 +266,7 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
   }
   function syncAll() {
     syncBinStep();
+    syncNetworkStep();
     syncExpiryStep();
     syncCvvStep();
     syncQuantity();
@@ -391,6 +405,9 @@ export function mountGeneratorPanel(services: GeneratorPanelServices): void {
     if (target.id === "prefix") {
       syncBinStep();
       syncPrefixHint();
+      // The networks compatible with the typed prefix decide the CVV width and
+      // the custom-CVV placeholder, so they must be re-derived while typing.
+      syncCvvStep();
     }
     if (target.id === "quantity") syncQuantity();
     reportErrors();

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   effectivePrefix,
   formNetworks,
+  hasFieldErrors,
   prepareGeneratorOptions,
   summarizeGeneratorForm,
   validateGeneratorForm,
@@ -257,7 +258,7 @@ describe("step 5 · generated fixture summary", () => {
     expect(summarizeGeneratorForm(values({ quantity: 1 }))).toContain("1 fixture"));
   it("summarizes Auto BIN mode across the compatible networks", () =>
     expect(summarizeGeneratorForm(values({ binMode: "auto", prefix: "" }))).toBe(
-      "Auto network · 15–16 digits · Auto expiry · Auto CVV · 10 fixtures",
+      "Auto network · 14–19 digits · Auto expiry · Auto CVV · 10 fixtures",
     ));
   it("summarizes a detected single network", () =>
     expect(summarizeGeneratorForm(values({ prefix: "424242" }))).toContain("Visa · 16 digits"));
@@ -299,5 +300,26 @@ describe("prepared generator options keep existing rules", () => {
       cvv: "auto",
     });
     expect(prepared.prefix).toBe("");
+  });
+});
+
+describe("the gate that blocks generation", () => {
+  it("reports no errors for a clean error set", () => {
+    expect(hasFieldErrors({})).toBe(false);
+  });
+  it.each([
+    [{ prefix: "Enter 6–8 digits." }],
+    [{ network: "Visa does not match this BIN." }],
+    [{ expiry: "Choose an expiry month after the current month." }],
+    [{ cvv: "Enter 3 or 4 digits only." }],
+    [{ quantity: "Choose a whole number of fixtures between 1 and 100." }],
+  ])("reports an error when %j is present", (errors) => {
+    expect(hasFieldErrors(errors)).toBe(true);
+  });
+  it("agrees with validateGeneratorForm for valid and invalid input", () => {
+    expect(hasFieldErrors(validateGeneratorForm({ ...form }, now))).toBe(false);
+    expect(
+      hasFieldErrors(validateGeneratorForm({ ...form, prefix: "abc" }, now)),
+    ).toBe(true);
   });
 });

@@ -7,7 +7,22 @@ Community & updates: [Join Channel on Telegram](https://t.me/+y8EekRvqpnQzNjZl)
 ## Workspace Tabs
 
 1. **Generator**: 100% local synthetic card fixture generator, built as a five-step flow.
-   - **Step 1 · BIN / IIN** — enter an explicit 6–8 digit synthetic test prefix, or switch on **Auto** to have a network-compatible prefix built locally. Network is detected from the BIN with existing local rules (Auto / Random, or a pinned Visa, Mastercard, Amex, Discover). Input is validated before anything is generated; full card numbers are never truncated into a prefix.
+   - **Step 1 · BIN / IIN** — enter an explicit 6–8 digit synthetic test prefix, or switch on **Auto** to have a network-compatible prefix built locally. Network is detected from the BIN with existing local rules (Auto / Random, or a pinned network).
+     Nine networks are supported, each with its own prefix ranges, accepted number lengths and CVV width:
+
+     | Network | Prefixes | Number length | CVV |
+     | --- | --- | --- | --- |
+     | Visa | `4` | 16 | 3 |
+     | Mastercard | `51`–`55`, `2221`–`2720` | 16 | 3 |
+     | Amex | `34`, `37` | 15 | 4 |
+     | Discover | `6011`, `644`–`649`, `65`, `622126`–`622925` | 16 | 3 |
+     | JCB | `3528`–`3589` | 16–19 | 3 |
+     | Diners | `300`–`305`, `3095`, `36`, `38`–`39` | 14–19 | 3 |
+     | UnionPay | `62`, `81` | 16–19 | 3 |
+     | Maestro | `5018`, `5020`, `5038`, `56`–`69`, `6759`, `6761`–`6763` | 16–19 | 3 |
+     | RuPay | `60`, `65`, `81`, `8214`–`8220` | 16 | 3 |
+
+     Some ranges are shared between schemes (`51`–`55`, `62`, `65`, `81`), exactly as they are in the real world. Auto/Random picks uniformly among the compatible networks, and the Card Sorter keeps the narrower original scheme first when a prefix matches more than one. Input is validated before anything is generated; full card numbers are never truncated into a prefix.
    - **Step 2 · Expiry** — **Auto** creates a synthetic future month/year locally, or choose **Custom** month + year from the dropdowns. Past and current-month values are refused with an inline message.
    - **Step 3 · CVV** — **Auto** uses the network-appropriate synthetic length (4 digits for Amex, 3 for the rest), or enter a **Custom** value of the correct length. Custom CVVs stay in the page and are never sent anywhere.
    - **Step 4 · Quantity** — 1–100, with quick presets 1 / 5 / 10 / 25 / 50 / 100.
@@ -30,7 +45,7 @@ Community & updates: [Join Channel on Telegram](https://t.me/+y8EekRvqpnQzNjZl)
    - Accepts common developer/test shapes: `number|MM|YYYY|CVV`, `number|MM/YY|CVV`, `number,MM,YYYY,CVV`, `number:MM:YYYY:CVV`, tab/semicolon or double-space variants, and a bare number per line.
    - Unrecognized lines are **preserved**, never silently deleted. Only the explicit `Remove invalid/empty lines` action drops them, and it reports how many went.
    - One-click cleaning actions: Remove duplicates, Remove empty lines, Trim whitespace, Normalize separators, Remove exact duplicate records, Remove invalid/empty lines, Reverse order, and Keep original order.
-   - Sorting by full line, first field / number prefix, network detected locally from the supplied prefix, and parsed expiry — always local, never a lookup.
+   - Sorting by full line, first field / number prefix, network detected locally from the supplied prefix (all nine networks above), and parsed expiry — always local, never a lookup.
    - Live statistics: input lines, unique lines, duplicates removed, empty lines removed, remaining lines, plus a Before / After counter.
    - Output area with one record per line: Copy All, Download TXT, Select All and Clear, with toasts, empty/loading/error states and keyboard shortcuts.
    - Visible note: `Local text processing — data is not uploaded.`
@@ -61,10 +76,26 @@ npm install
 npm run dev         # Starts Vite dev server on 0.0.0.0:5173
 npm run build       # Strict TypeScript check and production build (outputs dist/)
 npm start           # Serves the built dist/ on 0.0.0.0:$PORT (default 8080)
-npm test            # 324 Vitest unit tests + static-server integration tests
+npm test            # 387 Vitest unit tests + static-server integration tests
+npm run test:coverage  # Same suite with a V8 report in coverage/, enforcing thresholds
 npm run test:e2e    # Playwright browser tests across viewports (generator, BIN lookup, Card Sorter)
 npm run lint        # ESLint check
 ```
+
+## Continuous Integration
+
+`.github/workflows/ci.yml` runs on every push to `main`, every pull request, and
+on demand:
+
+| Job | Node | Runs |
+| --- | --- | --- |
+| `quality` | 20 and 22 | `npm run lint`, `tsc --noEmit`, `npm run test:coverage` (uploads the coverage report) |
+| `build` | 22 | `npm run build`, `npm run test:server`, uploads `dist/` |
+| `docker` | 22 | `docker build`, then boots the container and hits `/healthz` |
+| `e2e` | 22 | `playwright test` on the `desktop` and `mobile` projects |
+
+`build` and `e2e` wait for `quality`, so a lint or type failure short-circuits the
+expensive jobs. Superseded runs on the same branch are cancelled automatically.
 
 ## Deployment
 
@@ -76,6 +107,14 @@ build with `npm run build` and publish the `dist/` directory.
 
 **Web service / container hosts** (Railway, Render, Fly, Heroku, ...):
 the platform starts the app with the standard npm start command.
+
+**Docker**: a multi-stage `Dockerfile` builds the app and runs `server.js` as a
+non-root user, with a `/healthz` `HEALTHCHECK` baked in.
+
+```bash
+docker build -t origen .
+docker run --rm -p 8080:8080 origen
+```
 
 ```bash
 npm install

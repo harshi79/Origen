@@ -112,17 +112,19 @@ test("Auto BIN mode builds prefixes locally and randomizes compatible networks",
   await expect(page.getByLabel("BIN / IIN", { exact: true })).toBeDisabled();
   await expect(page.locator("#detected")).toContainText("Auto");
   await expect(page.locator("#summary")).toHaveText(
-    "Auto network · 15–16 digits · Auto expiry · Auto CVV · 10 fixtures",
+    "Auto network · 14–19 digits · Auto expiry · Auto CVV · 10 fixtures",
   );
   await generate(page);
   await expect(page.locator("tbody tr")).toHaveCount(10);
   const rows = await numbers(page);
-  expect(rows.every((value) => [15, 16].includes(value.length))).toBe(true);
+  expect(rows.every((value) => value.length >= 14 && value.length <= 19)).toBe(true);
   expect(rows.every((value) => luhn(value))).toBe(true);
   const networks = await page.locator("tbody .network-badge").allTextContents();
-  expect(networks.every((name) => /^(Visa|Mastercard|Amex|Discover)$/.test(name.trim()))).toBe(
-    true,
-  );
+  expect(
+    networks.every((name) =>
+      /^(Visa|Mastercard|Amex|Discover|JCB|Diners|UnionPay|Maestro|RuPay)$/.test(name.trim()),
+    ),
+  ).toBe(true);
   // Auto ignores typed digits: enabling it clears nothing, but nothing is used.
   await auto.uncheck();
   await page.getByLabel("BIN / IIN", { exact: true }).fill("378282");
@@ -363,4 +365,72 @@ test("the whole flow works with the keyboard and keeps the guide accurate", asyn
   await expect(guide).toContainText("Auto");
   await page.keyboard.press("Escape");
   await expect(guide).not.toBeVisible();
+});
+
+test("extended networks are selectable and generate in their own formats", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const network = page.getByLabel("Network", { exact: true });
+
+  // Every supported network is offered alongside Auto and Random.
+  await expect(network).toHaveCount(1);
+  expect(await network.locator("option").allTextContents()).toEqual([
+    "Auto",
+    "Visa",
+    "Mastercard",
+    "Amex",
+    "Discover",
+    "JCB",
+    "Diners",
+    "UnionPay",
+    "Maestro",
+    "RuPay",
+    "Random",
+  ]);
+
+  // Pinning a network explains its accepted length and CVV width locally.
+  await network.selectOption("JCB");
+  await expect(page.locator("#network-hint")).toContainText("JCB · 16–19 digits · 3-digit CVV");
+  // With no BIN entered every network is still compatible, so the CVV hint
+  // keeps describing the full Auto range rather than the pinned network.
+  await expect(page.locator("#cvv-hint")).toContainText("4 digits for Amex");
+
+  // JCB prefixes generate inside the JCB window and stay Luhn-compatible.
+  await page.getByLabel("BIN / IIN", { exact: true }).fill("353011");
+  await expect(page.locator("#detected")).toContainText("JCB");
+  // Only JCB matches this prefix, so the CVV hint narrows to its width.
+  await expect(page.locator("#cvv-hint")).toContainText("3 digits for JCB");
+  await generate(page);
+  await expect(page.locator("tbody tr")).toHaveCount(10);
+  expect(await page.locator("tbody .network-badge").allTextContents()).toEqual(
+    Array.from({ length: 10 }, () => "JCB"),
+  );
+  const jcb = await numbers(page);
+  expect(jcb.every((value) => value.startsWith("353011"))).toBe(true);
+  expect(jcb.every((value) => value.length >= 16 && value.length <= 19)).toBe(true);
+  expect(jcb.every((value) => luhn(value))).toBe(true);
+
+  // Diners Club uses a 14–19 digit body and is badged with its short name.
+  await network.selectOption("Diners Club");
+  await page.getByLabel("BIN / IIN", { exact: true }).fill("305693");
+  await expect(page.locator("#summary")).toHaveText(
+    "Diners · 14–19 digits · Auto expiry · Auto CVV · 10 fixtures",
+  );
+  await generate(page);
+  // Generation is asynchronous: wait for the new rows before reading them,
+  // otherwise the previous JCB run is still on screen.
+  await expect(page.locator("tbody .network-badge").first()).toHaveText("Diners");
+  const diners = await numbers(page);
+  expect(diners.every((value) => value.startsWith("305693"))).toBe(true);
+  expect(diners.every((value) => value.length >= 14 && value.length <= 19)).toBe(true);
+  expect(diners.every((value) => luhn(value))).toBe(true);
+  await expect(page.locator("tbody .network-badge").first()).toHaveText("Diners");
+
+  // An out-of-range prefix for the pinned network is still refused inline.
+  await network.selectOption("JCB");
+  await page.getByLabel("BIN / IIN", { exact: true }).fill("359000");
+  await expect(page.locator("#network-error")).toContainText("does not match this BIN");
+  await generate(page);
+  await expect(page.locator("tbody tr")).toHaveCount(10); // previous output untouched
 });
