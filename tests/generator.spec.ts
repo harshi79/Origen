@@ -418,6 +418,9 @@ test("extended networks are selectable and generate in their own formats", async
     "Diners · 14–19 digits · Auto expiry · Auto CVV · 10 fixtures",
   );
   await generate(page);
+  // Generation is asynchronous: wait for the new rows before reading them,
+  // otherwise the previous JCB run is still on screen.
+  await expect(page.locator("tbody .network-badge").first()).toHaveText("Diners");
   const diners = await numbers(page);
   expect(diners.every((value) => value.startsWith("305693"))).toBe(true);
   expect(diners.every((value) => value.length >= 14 && value.length <= 19)).toBe(true);
