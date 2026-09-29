@@ -6,9 +6,15 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc --noEmit && vite build",
-    "test": "vitest run",
+    "start": "node server.js",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "vitest run && npm run test:server",
+    "test:server": "node --test tests/server.test.mjs",
     "lint": "eslint .",
     "test:e2e": "playwright test"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "lucide": "^0.468.0"
